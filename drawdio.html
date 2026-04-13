@@ -1,0 +1,4507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drawdio</title>
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #0d0d1a;
+  color: #ccc;
+  font-size: 13px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ============================================================
+   TOOLBAR
+   ============================================================ */
+#toolbar {
+  height: 40px;
+  background: #1a1a2e;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  border-bottom: 1px solid #2a2a4a;
+  z-index: 100;
+}
+#toolbar .logo {
+  font-weight: 700;
+  font-size: 15px;
+  color: #4fc3f7;
+  letter-spacing: 1px;
+  margin-right: 16px;
+}
+#toolbar .separator {
+  width: 1px;
+  height: 20px;
+  background: #2a2a4a;
+  margin: 0 8px;
+}
+.toolbar-btn {
+  background: transparent;
+  color: #ccc;
+  border: 1px solid transparent;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+}
+.toolbar-btn:hover { background: #2a2a4a; }
+.toolbar-btn.active { background: #4fc3f7; color: #0d0d1a; border-color: #4fc3f7; }
+.toolbar-select {
+  background: #222;
+  color: #ccc;
+  border: 1px solid #2a2a4a;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.toolbar-select:focus { outline: 1px solid #4fc3f7; }
+.toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.toolbar-info { color: #666; font-size: 11px; font-family: monospace; }
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+#app {
+  display: flex;
+  height: calc(100vh - 40px);
+}
+
+/* ============================================================
+   LEFT PANEL
+   ============================================================ */
+#left-panel {
+  width: 180px;
+  min-width: 0;
+  background: #151528;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #2a2a4a;
+  position: relative;
+  overflow: hidden;
+  transition: width 0.15s ease;
+}
+#left-panel.collapsed {
+  width: 0 !important;
+  border-right: none;
+}
+#panel-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+}
+#panel-resize-handle:hover,
+#panel-resize-handle.active {
+  background: #4fc3f7;
+  opacity: 0.5;
+}
+#panel-toggle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 110;
+  width: 16px;
+  height: 40px;
+  background: #1e1e36;
+  border: 1px solid #2a2a4a;
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  color: #888;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: left 0.15s ease;
+}
+#panel-toggle:hover { background: #2a2a4a; color: #ccc; }
+#palette {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+}
+#palette::-webkit-scrollbar { width: 4px; }
+#palette::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+.palette-search {
+  width: 100%;
+  background: #222;
+  color: #ccc;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-family: inherit;
+  margin-bottom: 6px;
+}
+.palette-search:focus { outline: none; border-color: #4fc3f7; }
+.palette-search::placeholder { color: #555; }
+.palette-heading {
+  font-size: 10px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 12px 0 6px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.palette-heading:first-child { margin-top: 4px; }
+.palette-heading::before {
+  content: '\25BE';
+  font-size: 8px;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+.palette-heading.collapsed::before {
+  transform: rotate(-90deg);
+}
+.palette-category.collapsed .palette-item { display: none; }
+.palette-drag-ghost {
+  position: fixed;
+  background: #4fc3f7;
+  color: #0d0d1a;
+  font-size: 11px;
+  font-family: system-ui, -apple-system, sans-serif;
+  padding: 4px 10px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 3000;
+  opacity: 0.85;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  white-space: nowrap;
+}
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: grab;
+  transition: background 0.15s;
+}
+.palette-item:hover { background: #2a2a4a; }
+.palette-item.placing { background: #4fc3f7; color: #0d0d1a; }
+.palette-item.placing .palette-icon { border-color: #0d0d1a; }
+.palette-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.palette-label { font-size: 12px; }
+
+/* ============================================================
+   PROPERTIES PANEL
+   ============================================================ */
+/* ============================================================
+   RIGHT PANEL (Properties / Effects)
+   ============================================================ */
+#right-panel {
+  width: 220px;
+  min-width: 0;
+  background: #151528;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #2a2a4a;
+  overflow: hidden;
+}
+#properties-panel {
+  flex: 1;
+  padding: 10px 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+#properties-panel:empty { display: none; }
+#properties-panel::-webkit-scrollbar { width: 4px; }
+#properties-panel::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+/* Layers panel */
+#layers-panel {
+  border-top: 1px solid #2a2a4a;
+  max-height: 45%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 0;
+}
+#layers-panel::-webkit-scrollbar { width: 4px; }
+#layers-panel::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+.layers-heading {
+  font-size: 10px;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 4px 12px 6px;
+}
+.layer-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #aaa;
+}
+.layer-item:hover { background: #1e1e36; }
+.layer-item.selected { background: #2a2a4a; color: #fff; }
+.layer-item.hidden-layer { opacity: 0.4; }
+.layer-eye {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  color: #888;
+  border-radius: 2px;
+}
+.layer-eye:hover { color: #ccc; background: #333; }
+.layer-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.layer-type {
+  font-size: 9px;
+  color: #555;
+  flex-shrink: 0;
+}
+.layer-arrows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex-shrink: 0;
+}
+.layer-arrow {
+  width: 14px;
+  height: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  cursor: pointer;
+  color: #666;
+  border-radius: 2px;
+}
+.layer-arrow:hover { color: #ccc; background: #333; }
+.props-heading {
+  font-size: 10px;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 10px 0 6px 0;
+  padding: 4px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid #2a2a4a;
+}
+.props-heading:first-child { margin-top: 0; }
+.props-heading:hover { color: #aaa; }
+.props-heading::before {
+  content: '\25BE';
+  font-size: 8px;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+.props-heading.collapsed::before {
+  transform: rotate(-90deg);
+}
+.props-section.collapsed { display: none; }
+.props-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  min-width: 0;
+}
+.props-label {
+  font-size: 11px;
+  color: #888;
+  min-width: 0;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.props-input {
+  flex: 1;
+  min-width: 0;
+  background: #222;
+  color: #ccc;
+  border: 1px solid #333;
+  border-radius: 3px;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-family: monospace;
+}
+.props-input:focus { outline: none; border-color: #4fc3f7; }
+.props-input-sm {
+  width: 48px;
+  min-width: 36px;
+  flex: 1 1 48px;
+}
+.color-swatches {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.color-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s;
+}
+.color-swatch:hover { border-color: #fff; }
+.color-swatch.active { border-color: #fff; }
+
+/* ============================================================
+   CANVAS CONTAINER
+   ============================================================ */
+#canvas-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  cursor: crosshair;
+  background: #0a0a14;
+}
+#canvas {
+  overflow: visible;
+}
+#canvas-container.grabbing { cursor: grabbing; }
+#canvas-container.default { cursor: default; }
+
+/* ============================================================
+   CONTEXT MENU
+   ============================================================ */
+.context-menu {
+  position: fixed;
+  background: #1e1e36;
+  border: 1px solid #3a3a5a;
+  border-radius: 6px;
+  padding: 4px 0;
+  min-width: 200px;
+  z-index: 1000;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #ccc;
+}
+.context-menu-item:hover { background: #2a2a4a; }
+.context-menu-item.disabled { color: #555; pointer-events: none; }
+.context-menu-shortcut { color: #666; font-size: 11px; margin-left: 24px; }
+.context-menu-separator {
+  height: 1px;
+  background: #2a2a4a;
+  margin: 4px 0;
+}
+
+/* ============================================================
+   TOOLTIP
+   ============================================================ */
+.drawdio-tooltip {
+  position: fixed;
+  background: #1e1e36;
+  color: #ccc;
+  border: 1px solid #3a3a5a;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-family: system-ui, -apple-system, sans-serif;
+  pointer-events: none;
+  z-index: 2000;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.drawdio-tooltip.visible { opacity: 1; }
+.drawdio-tooltip-type { color: #888; font-size: 10px; }
+
+/* ============================================================
+   TOOLBAR DROPDOWN MENU
+   ============================================================ */
+.toolbar-dropdown {
+  position: relative;
+  display: inline-block;
+}
+.toolbar-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #1e1e36;
+  border: 1px solid #3a3a5a;
+  border-radius: 4px;
+  padding: 4px 0;
+  min-width: 180px;
+  z-index: 500;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  margin-top: 4px;
+}
+.toolbar-dropdown-menu.open { display: block; }
+.toolbar-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 14px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #ccc;
+}
+.toolbar-dropdown-item:hover { background: #2a2a4a; }
+.toolbar-dropdown-sep {
+  height: 1px;
+  background: #2a2a4a;
+  margin: 3px 0;
+}
+.toolbar-dropdown-shortcut { color: #666; font-size: 11px; margin-left: 16px; }
+
+/* Auto-save indicator */
+.autosave-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #66bb6a;
+  display: inline-block;
+  margin-left: 6px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.autosave-dot.flash { opacity: 1; }
+
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     TOOLBAR
+     ============================================================ -->
+<div id="toolbar">
+  <span class="logo">DRAWDIO</span>
+  <div class="separator"></div>
+  <div class="toolbar-dropdown">
+    <button id="btn-file" class="toolbar-btn">File</button>
+    <div id="file-menu" class="toolbar-dropdown-menu"></div>
+  </div>
+  <div class="toolbar-dropdown">
+    <button id="btn-export" class="toolbar-btn">Export</button>
+    <div id="export-menu" class="toolbar-dropdown-menu"></div>
+  </div>
+  <div class="separator"></div>
+  <select id="preset-select" class="toolbar-select">
+    <option value="900,600">Full Synth (900x600)</option>
+    <option value="400,300">Compact Effect (400x300)</option>
+    <option value="600,300">Wide Effect (600x300)</option>
+    <option value="200,500">Channel Strip (200x500)</option>
+    <option value="custom">Custom...</option>
+  </select>
+  <span id="canvas-size-info" class="toolbar-info">900 x 600</span>
+  <div class="toolbar-right">
+    <span id="autosave-dot" class="autosave-dot"></span>
+    <button id="btn-tips" class="toolbar-btn active" title="Toggle tooltips">Tips</button>
+    <button id="btn-snap" class="toolbar-btn active" title="Toggle snap to grid">Snap</button>
+    <button id="btn-grid" class="toolbar-btn active" title="Toggle grid visibility (G)">Grid</button>
+  </div>
+</div>
+<input type="file" id="file-input" accept=".drawdio.json,.json" style="display:none">
+
+<!-- ============================================================
+     APP BODY
+     ============================================================ -->
+<div id="app">
+  <div id="left-panel">
+    <div id="palette"></div>
+    <div id="panel-resize-handle"></div>
+  </div>
+  <div id="panel-toggle" title="Toggle panel">&lsaquo;</div>
+  <div id="canvas-container">
+    <svg id="canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+  <div id="right-panel">
+    <div id="properties-panel"></div>
+    <div id="layers-panel"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DRAWDIO — Audio Plugin UI Mockup Tool
+// Phase 1: Scaffold + Canvas + 3 Components
+// ============================================================
+//
+// NOTE: This is a self-contained single-file app. All content
+// is generated from trusted internal state — no user-supplied
+// HTML is rendered. DOM construction uses safe methods
+// (createElement, textContent, setAttribute, SVG _el helper).
+// innerHTML is only used to clear containers of internally
+// generated content, or to set static trusted SVG icon markup
+// in the palette (hardcoded strings, not user input).
+// ============================================================
+
+const App = {
+  // ============================================================
+  // STATE
+  // ============================================================
+  state: {
+    canvasWidth: 900,
+    canvasHeight: 600,
+    bgColor: '#1a1a1a',
+    gridSize: 20,
+    gridVisible: true,
+    snapEnabled: true,
+    zoom: 1,
+    panX: 0,
+    panY: 0,
+    components: [],
+    groups: [],
+    selectedIds: [],
+    nextId: 1,
+    clipboard: [],
+    isDirty: false,
+    fileName: null,
+    tooltipsEnabled: true,
+  },
+
+  COLORS: [
+    '#4fc3f7', '#f06292', '#66bb6a', '#ffa726',
+    '#ef5350', '#ffee58', '#ab47bc', '#ffffff', '#888888'
+  ],
+
+  // ============================================================
+  // INITIALIZATION
+  // ============================================================
+  init() {
+    this.canvas.init();
+    this.grid.render();
+    this.palette.init();
+    this.toolbar.init();
+    this.shortcuts.init();
+    this.drag.init();
+    this.tooltip.init();
+    this.io.init();
+    this.panel.init();
+    this.layers.init();
+  },
+
+  // ============================================================
+  // CANVAS
+  // ============================================================
+  canvas: {
+    svg: null,
+    defs: null,
+    bgRect: null,
+    gridRect: null,
+    componentsLayer: null,
+    selectionLayer: null,
+
+    init() {
+      this.svg = document.getElementById('canvas');
+      const s = App.state;
+      this.svg.setAttribute('width', s.canvasWidth);
+      this.svg.setAttribute('height', s.canvasHeight);
+      this.svg.setAttribute('viewBox', '0 0 ' + s.canvasWidth + ' ' + s.canvasHeight);
+
+      // Defs
+      this.defs = this._el('defs');
+      this.svg.appendChild(this.defs);
+
+      // Grid pattern
+      const pattern = this._el('pattern', {
+        id: 'grid-pattern',
+        width: s.gridSize,
+        height: s.gridSize,
+        patternUnits: 'userSpaceOnUse'
+      });
+      pattern.appendChild(this._el('circle', {
+        cx: s.gridSize / 2, cy: s.gridSize / 2, r: 0.6, fill: '#333'
+      }));
+      this.defs.appendChild(pattern);
+
+      // Background
+      this.bgRect = this._el('rect', {
+        width: s.canvasWidth, height: s.canvasHeight,
+        fill: s.bgColor
+      });
+      this.svg.appendChild(this.bgRect);
+
+      // Grid
+      this.gridRect = this._el('rect', {
+        width: s.canvasWidth, height: s.canvasHeight,
+        fill: 'url(#grid-pattern)'
+      });
+      this.svg.appendChild(this.gridRect);
+
+      // Component layer
+      this.componentsLayer = this._el('g', { id: 'components-layer' });
+      this.svg.appendChild(this.componentsLayer);
+
+      // Selection layer
+      this.selectionLayer = this._el('g', { id: 'selection-layer' });
+      this.svg.appendChild(this.selectionLayer);
+    },
+
+    resize(w, h) {
+      const s = App.state;
+      s.canvasWidth = w;
+      s.canvasHeight = h;
+      this.svg.setAttribute('width', w);
+      this.svg.setAttribute('height', h);
+      this.svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+      this.bgRect.setAttribute('width', w);
+      this.bgRect.setAttribute('height', h);
+      this.gridRect.setAttribute('width', w);
+      this.gridRect.setAttribute('height', h);
+      document.getElementById('canvas-size-info').textContent = w + ' x ' + h;
+    },
+
+    screenToCanvas(screenX, screenY) {
+      const pt = this.svg.createSVGPoint();
+      pt.x = screenX;
+      pt.y = screenY;
+      const ctm = this.svg.getScreenCTM().inverse();
+      const svgPt = pt.matrixTransform(ctm);
+      return { x: svgPt.x, y: svgPt.y };
+    },
+
+    zoom: function(delta, clientX, clientY) {
+      var vb = this._getViewBox();
+      var oldZoom = App.state.canvasWidth / vb.w;
+      var newZoom = Math.max(0.25, Math.min(4, oldZoom + delta));
+      if (newZoom === oldZoom) return;
+
+      // Zoom towards cursor position
+      var pt = this.screenToCanvas(clientX, clientY);
+      var newW = App.state.canvasWidth / newZoom;
+      var newH = App.state.canvasHeight / newZoom;
+      var newX = pt.x - (pt.x - vb.x) * (newW / vb.w);
+      var newY = pt.y - (pt.y - vb.y) * (newH / vb.h);
+
+      this._setViewBox(newX, newY, newW, newH);
+      App.state.zoom = newZoom;
+      document.getElementById('canvas-size-info').textContent =
+        App.state.canvasWidth + ' x ' + App.state.canvasHeight + ' (' + Math.round(newZoom * 100) + '%)';
+    },
+
+    zoomToFit: function() {
+      this._setViewBox(0, 0, App.state.canvasWidth, App.state.canvasHeight);
+      App.state.zoom = 1;
+      document.getElementById('canvas-size-info').textContent =
+        App.state.canvasWidth + ' x ' + App.state.canvasHeight;
+    },
+
+    _getViewBox: function() {
+      var parts = this.svg.getAttribute('viewBox').split(/\s+/).map(Number);
+      return { x: parts[0], y: parts[1], w: parts[2], h: parts[3] };
+    },
+
+    _setViewBox: function(x, y, w, h) {
+      this.svg.setAttribute('viewBox', x + ' ' + y + ' ' + w + ' ' + h);
+    },
+
+    _el: function(tag, attrs) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      if (attrs) {
+        for (const [k, v] of Object.entries(attrs)) {
+          el.setAttribute(k, v);
+        }
+      }
+      return el;
+    }
+  },
+
+  // ============================================================
+  // GRID
+  // ============================================================
+  grid: {
+    render() {
+      const rect = App.canvas.gridRect;
+      if (App.state.gridVisible) {
+        rect.setAttribute('visibility', 'visible');
+      } else {
+        rect.setAttribute('visibility', 'hidden');
+      }
+    },
+
+    snap(x, y) {
+      if (!App.state.snapEnabled || App.drag._altHeld) {
+        return { x: x, y: y };
+      }
+      const g = App.state.gridSize;
+      return {
+        x: Math.round(x / g) * g,
+        y: Math.round(y / g) * g
+      };
+    },
+
+    toggle() {
+      App.state.gridVisible = !App.state.gridVisible;
+      this.render();
+      document.getElementById('btn-grid').classList.toggle('active', App.state.gridVisible);
+    }
+  },
+
+  // ============================================================
+  // COMPONENT REGISTRY & MANAGEMENT
+  // ============================================================
+  components: {
+    registry: {},
+
+    register(type, factory) {
+      this.registry[type] = factory;
+    },
+
+    create(type, x, y) {
+      const factory = this.registry[type];
+      if (!factory) return null;
+      const defaults = JSON.parse(JSON.stringify(factory.defaultProps));
+      const id = type + '_' + App.state.nextId++;
+      const data = {
+        id: id,
+        type: type,
+        x: x, y: y,
+        width: defaults.width,
+        height: defaults.height,
+        color: defaults.color,
+        label: defaults.label,
+        properties: defaults.properties || {},
+        effects: {
+          drop_shadow: { enabled: false, intensity: 50 },
+          inner_shadow: { enabled: false, intensity: 50 },
+          blur_glow: { enabled: false, intensity: 30 },
+          bevel: { enabled: false, intensity: 50 },
+          gloss: { enabled: false, intensity: 50 },
+          gradient_fill: { enabled: false, intensity: 50, startColor: '#ffffff', endColor: '#000000', angle: 0 },
+          texture_fill: { enabled: false, intensity: 50, preset: 'noise' },
+        },
+        group: null,
+        visible: true,
+        zIndex: App.state.components.length,
+      };
+      App.state.components.push(data);
+      this.renderOne(data);
+      App.history.push({
+        type: 'create',
+        undo: function() { App.components.remove(id, true); },
+        redo: function() {
+          App.state.components.push(data);
+          App.components.renderOne(data);
+        }
+      });
+      App.state.isDirty = true;
+      return data;
+    },
+
+    renderOne(data) {
+      // Remove existing SVG if any
+      const existing = App.canvas.componentsLayer.querySelector('[data-id="' + data.id + '"]');
+      if (existing) existing.remove();
+
+      // Clean up old effect defs
+      App.effects.cleanup(data.id);
+
+      // Hidden components: don't render SVG
+      if (data.visible === false) return;
+
+      const factory = this.registry[data.type];
+      if (!factory) return;
+      const g = factory.render(data);
+      g.setAttribute('data-id', data.id);
+      g.setAttribute('transform', 'translate(' + data.x + ', ' + data.y + ')');
+      g.style.cursor = 'move';
+
+      // Apply effects
+      if (data.effects) {
+        var filterId = App.effects.buildFilter(data.id, data.effects);
+        if (filterId) {
+          g.setAttribute('filter', 'url(#' + filterId + ')');
+        }
+        App.effects.buildOverlays(g, data);
+      }
+
+      App.canvas.componentsLayer.appendChild(g);
+    },
+
+    renderAll() {
+      while (App.canvas.componentsLayer.firstChild) {
+        App.canvas.componentsLayer.removeChild(App.canvas.componentsLayer.firstChild);
+      }
+      var sorted = App.state.components.slice().sort(function(a, b) { return a.zIndex - b.zIndex; });
+      for (var i = 0; i < sorted.length; i++) {
+        this.renderOne(sorted[i]);
+      }
+    },
+
+    remove(id, skipHistory) {
+      var idx = App.state.components.findIndex(function(c) { return c.id === id; });
+      if (idx === -1) return;
+      var data = App.state.components[idx];
+      App.state.components.splice(idx, 1);
+      var el = App.canvas.componentsLayer.querySelector('[data-id="' + id + '"]');
+      if (el) el.remove();
+      App.effects.cleanup(id);
+
+      if (!skipHistory) {
+        var savedData = JSON.parse(JSON.stringify(data));
+        var savedIdx = idx;
+        App.history.push({
+          type: 'delete',
+          undo: function() {
+            App.state.components.splice(savedIdx, 0, savedData);
+            App.components.renderOne(savedData);
+          },
+          redo: function() { App.components.remove(id, true); }
+        });
+      }
+      App.state.isDirty = true;
+    },
+
+    getById(id) {
+      return App.state.components.find(function(c) { return c.id === id; });
+    },
+
+    getAtPoint(x, y) {
+      // Walk backwards (top-most first)
+      for (var i = App.state.components.length - 1; i >= 0; i--) {
+        var c = App.state.components[i];
+        if (x >= c.x && x <= c.x + c.width && y >= c.y && y <= c.y + c.height) {
+          return c;
+        }
+      }
+      return null;
+    },
+
+    updatePosition(id, x, y) {
+      var data = this.getById(id);
+      if (!data) return;
+      var el = App.canvas.componentsLayer.querySelector('[data-id="' + id + '"]');
+      data.x = x;
+      data.y = y;
+      if (el) el.setAttribute('transform', 'translate(' + x + ', ' + y + ')');
+    },
+
+    duplicate(ids) {
+      var newIds = [];
+      for (var i = 0; i < ids.length; i++) {
+        var src = this.getById(ids[i]);
+        if (!src) continue;
+        var copy = JSON.parse(JSON.stringify(src));
+        copy.id = src.type + '_' + App.state.nextId++;
+        copy.x += App.state.gridSize;
+        copy.y += App.state.gridSize;
+        copy.zIndex = App.state.components.length;
+        App.state.components.push(copy);
+        this.renderOne(copy);
+        newIds.push(copy.id);
+      }
+      if (newIds.length > 0) {
+        var capturedIds = newIds.slice();
+        App.history.push({
+          type: 'duplicate',
+          undo: function() {
+            for (var j = 0; j < capturedIds.length; j++) {
+              App.components.remove(capturedIds[j], true);
+            }
+          },
+          redo: function() { /* handled by state restore */ }
+        });
+        App.state.isDirty = true;
+      }
+      return newIds;
+    }
+  },
+
+  // ============================================================
+  // COMPONENT FACTORIES
+  // ============================================================
+  _registerComponents: function() {
+    var _el = App.canvas._el.bind(App.canvas);
+
+    // --- Rotary Knob ---
+    App.components.register('rotary_knob', {
+      category: 'Controls',
+      displayName: 'Knob',
+      defaultProps: {
+        width: 48, height: 60, color: '#4fc3f7', label: 'Knob',
+        properties: { min: 0, max: 100, default: 50, unit: '' }
+      },
+      render: function(data) {
+        var g = _el('g');
+        var labelH = data.label ? 14 : 0;
+        var knobSize = Math.min(data.width, data.height - labelH);
+        var cx = data.width / 2;
+        var cy = knobSize / 2;
+        var r = knobSize / 2 - 2;
+
+        // Body
+        g.appendChild(_el('circle', {
+          cx: cx, cy: cy, r: r, fill: '#2a2a3a', stroke: data.color, 'stroke-width': 1.5
+        }));
+
+        // Value arc (270 degrees, from 135deg to 45deg)
+        var arcR = r - 4;
+        if (arcR > 2) {
+          var startAngle = 135 * Math.PI / 180;
+          var endAngle = 45 * Math.PI / 180;
+          var startX = cx + arcR * Math.cos(startAngle);
+          var startY = cy + arcR * Math.sin(startAngle);
+          var endX = cx + arcR * Math.cos(endAngle);
+          var endY = cy + arcR * Math.sin(endAngle);
+          g.appendChild(_el('path', {
+            d: 'M ' + startX + ' ' + startY + ' A ' + arcR + ' ' + arcR + ' 0 1 1 ' + endX + ' ' + endY,
+            fill: 'none', stroke: data.color, 'stroke-width': 2.5,
+            'stroke-linecap': 'round', 'stroke-opacity': 0.35
+          }));
+        }
+
+        // Pointer line (pointing up from center)
+        var pAngle = -90 * Math.PI / 180;
+        var pLen = r - 6;
+        if (pLen > 2) {
+          g.appendChild(_el('line', {
+            x1: cx, y1: cy,
+            x2: cx + pLen * Math.cos(pAngle),
+            y2: cy + pLen * Math.sin(pAngle),
+            stroke: '#fff', 'stroke-width': 2, 'stroke-linecap': 'round'
+          }));
+        }
+
+        // Label
+        if (data.label) {
+          var text = _el('text', {
+            x: cx, y: data.height - 2,
+            'text-anchor': 'middle', fill: '#aaa', 'font-size': 10,
+            'font-family': 'system-ui, sans-serif'
+          });
+          text.textContent = data.label;
+          g.appendChild(text);
+        }
+
+        // Hit area to fill bounds
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: data.width, height: data.height,
+          fill: 'transparent'
+        }));
+
+        return g;
+      },
+      getEditableProperties: function() {
+        return [
+          { name: 'min', type: 'number', label: 'Min' },
+          { name: 'max', type: 'number', label: 'Max' },
+          { name: 'default', type: 'number', label: 'Default' },
+          { name: 'unit', type: 'text', label: 'Unit' },
+        ];
+      }
+    });
+
+    // --- Horizontal Slider ---
+    App.components.register('horizontal_slider', {
+      category: 'Controls',
+      displayName: 'H Slider',
+      defaultProps: {
+        width: 120, height: 36, color: '#4fc3f7', label: 'Slider',
+        properties: { min: 0, max: 100, default: 50, unit: '' }
+      },
+      render: function(data) {
+        var g = _el('g');
+        var labelH = data.label ? 14 : 0;
+        var trackArea = data.height - labelH;
+        var trackY = trackArea / 2;
+        var trackH = Math.max(2, trackArea * 0.15);
+        var thumbR = Math.min(trackArea / 2 - 1, data.width * 0.06, 10);
+
+        // Track background
+        g.appendChild(_el('rect', {
+          x: thumbR, y: trackY - trackH / 2,
+          width: data.width - thumbR * 2, height: trackH,
+          rx: trackH / 2, fill: '#2a2a3a'
+        }));
+
+        // Filled portion
+        var pct = 0.5;
+        g.appendChild(_el('rect', {
+          x: thumbR, y: trackY - trackH / 2,
+          width: (data.width - thumbR * 2) * pct, height: trackH,
+          rx: trackH / 2, fill: data.color, 'fill-opacity': 0.5
+        }));
+
+        // Thumb
+        g.appendChild(_el('circle', {
+          cx: thumbR + (data.width - thumbR * 2) * pct, cy: trackY, r: thumbR,
+          fill: '#ddd', stroke: data.color, 'stroke-width': 1.5
+        }));
+
+        // Label
+        if (data.label) {
+          var text = _el('text', {
+            x: data.width / 2, y: data.height - 2,
+            'text-anchor': 'middle', fill: '#aaa', 'font-size': 10,
+            'font-family': 'system-ui, sans-serif'
+          });
+          text.textContent = data.label;
+          g.appendChild(text);
+        }
+
+        // Hit area
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: data.width, height: data.height,
+          fill: 'transparent'
+        }));
+
+        return g;
+      },
+      getEditableProperties: function() {
+        return [
+          { name: 'min', type: 'number', label: 'Min' },
+          { name: 'max', type: 'number', label: 'Max' },
+          { name: 'default', type: 'number', label: 'Default' },
+          { name: 'unit', type: 'text', label: 'Unit' },
+        ];
+      }
+    });
+
+    // --- Momentary Button ---
+    App.components.register('momentary_button', {
+      category: 'Controls',
+      displayName: 'Button',
+      defaultProps: {
+        width: 60, height: 28, color: '#4fc3f7', label: 'Button',
+        properties: {}
+      },
+      render: function(data) {
+        var g = _el('g');
+
+        // Body
+        g.appendChild(_el('rect', {
+          x: 0, y: 0,
+          width: data.width, height: data.height,
+          rx: 4, fill: '#2a2a3a', stroke: data.color, 'stroke-width': 1
+        }));
+
+        // Label
+        var text = _el('text', {
+          x: data.width / 2, y: data.height / 2 + 4,
+          'text-anchor': 'middle', fill: data.color, 'font-size': 11,
+          'font-family': 'system-ui, sans-serif'
+        });
+        text.textContent = data.label;
+        g.appendChild(text);
+
+        return g;
+      },
+      getEditableProperties: function() {
+        return [];
+      }
+    });
+
+    // --- Toggle Switch ---
+    App.components.register('toggle_switch', {
+      category: 'Controls',
+      displayName: 'Toggle',
+      defaultProps: {
+        width: 36, height: 32, color: '#4fc3f7', label: 'Toggle',
+        properties: { default: true }
+      },
+      render: function(data) {
+        var g = _el('g');
+        var labelH = data.label ? 14 : 0;
+        var pillW = data.width;
+        var pillH = Math.max(8, data.height - labelH);
+        var r = pillH / 2;
+        var isOn = data.properties.default;
+
+        // Pill background
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: pillW, height: pillH,
+          rx: r, fill: isOn ? data.color : '#2a2a3a',
+          'fill-opacity': isOn ? 0.4 : 1,
+          stroke: data.color, 'stroke-width': 1
+        }));
+
+        // Thumb
+        var thumbR = Math.max(2, r - 3);
+        var thumbX = isOn ? pillW - r : r;
+        g.appendChild(_el('circle', {
+          cx: thumbX, cy: r, r: thumbR,
+          fill: isOn ? data.color : '#888'
+        }));
+
+        // Label
+        if (data.label) {
+          var text = _el('text', {
+            x: pillW / 2, y: data.height - 2,
+            'text-anchor': 'middle', fill: '#aaa', 'font-size': 10,
+            'font-family': 'system-ui, sans-serif'
+          });
+          text.textContent = data.label;
+          g.appendChild(text);
+        }
+
+        // Hit area
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: data.width, height: data.height,
+          fill: 'transparent'
+        }));
+        return g;
+      },
+      getEditableProperties: function() {
+        return [
+          { name: 'default', type: 'checkbox', label: 'On' }
+        ];
+      }
+    });
+
+    // --- Vertical Slider / Fader ---
+    App.components.register('vertical_slider', {
+      category: 'Controls',
+      displayName: 'Fader',
+      defaultProps: {
+        width: 24, height: 110, color: '#4fc3f7', label: 'Fader',
+        properties: { min: 0, max: 100, default: 50, unit: '' }
+      },
+      render: function(data) {
+        var g = _el('g');
+        var labelH = data.label ? 14 : 0;
+        var trackW = Math.max(2, data.width * 0.15);
+        var trackX = data.width / 2 - trackW / 2;
+        var trackH = data.height - labelH;
+        var thumbH = Math.max(4, trackH * 0.08);
+        var thumbW = Math.min(data.width, trackW * 4);
+
+        // Track bg
+        g.appendChild(_el('rect', {
+          x: trackX, y: 0, width: trackW, height: trackH,
+          rx: trackW / 2, fill: '#2a2a3a'
+        }));
+
+        // Filled portion (from bottom)
+        var pct = 0.5;
+        var fillH = trackH * pct;
+        g.appendChild(_el('rect', {
+          x: trackX, y: trackH - fillH, width: trackW, height: fillH,
+          rx: trackW / 2, fill: data.color, 'fill-opacity': 0.5
+        }));
+
+        // Thumb
+        var thumbY = trackH * (1 - pct) - thumbH / 2;
+        g.appendChild(_el('rect', {
+          x: data.width / 2 - thumbW / 2, y: thumbY,
+          width: thumbW, height: thumbH,
+          rx: 2, fill: '#ddd', stroke: data.color, 'stroke-width': 1.5
+        }));
+
+        // Label
+        if (data.label) {
+          var text = _el('text', {
+            x: data.width / 2, y: data.height - 2,
+            'text-anchor': 'middle', fill: '#aaa', 'font-size': 10,
+            'font-family': 'system-ui, sans-serif'
+          });
+          text.textContent = data.label;
+          g.appendChild(text);
+        }
+
+        // Hit area
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: data.width, height: data.height,
+          fill: 'transparent'
+        }));
+        return g;
+      },
+      getEditableProperties: function() {
+        return [
+          { name: 'min', type: 'number', label: 'Min' },
+          { name: 'max', type: 'number', label: 'Max' },
+          { name: 'default', type: 'number', label: 'Default' },
+          { name: 'unit', type: 'text', label: 'Unit' },
+        ];
+      }
+    });
+
+    // --- Dropdown / Selector ---
+    App.components.register('dropdown', {
+      category: 'Controls',
+      displayName: 'Dropdown',
+      defaultProps: {
+        width: 100, height: 24, color: '#4fc3f7', label: 'Mode',
+        properties: { options: 'LP 24dB,HP 12dB,BP,Notch', selected: 'LP 24dB' }
+      },
+      render: function(data) {
+        var g = _el('g');
+
+        // Body
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: data.width, height: data.height,
+          rx: 3, fill: '#222', stroke: '#555', 'stroke-width': 0.5
+        }));
+
+        // Current value text
+        var text = _el('text', {
+          x: 8, y: data.height / 2 + 4,
+          fill: '#ccc', 'font-size': 11,
+          'font-family': 'system-ui, sans-serif'
+        });
+        text.textContent = data.properties.selected || data.label;
+        g.appendChild(text);
+
+        // Down arrow chevron
+        var ax = data.width - 14;
+        var ay = data.height / 2;
+        g.appendChild(_el('path', {
+          d: 'M ' + (ax - 3) + ' ' + (ay - 2) + ' L ' + ax + ' ' + (ay + 2) + ' L ' + (ax + 3) + ' ' + (ay - 2),
+          fill: 'none', stroke: '#888', 'stroke-width': 1.5, 'stroke-linecap': 'round'
+        }));
+
+        return g;
+      },
+      getEditableProperties: function() {
+        return [
+          { name: 'options', type: 'text', label: 'Options' },
+          { name: 'selected', type: 'text', label: 'Value' },
+        ];
+      }
+    });
+
+    // --- XY Pad ---
+    App.components.register('xy_pad', {
+      category: 'Controls',
+      displayName: 'XY Pad',
+      defaultProps: {
+        width: 120, height: 120, color: '#4fc3f7', label: 'XY',
+        properties: { 'x-label': 'X', 'y-label': 'Y' }
+      },
+      render: function(data) {
+        var g = _el('g');
+        var w = data.width;
+        var h = data.height;
+
+        // Background
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: w, height: h,
+          rx: 2, fill: '#1a1a2a', stroke: '#444', 'stroke-width': 0.5
+        }));
+
+        // Grid lines (subtle)
+        for (var gx = 1; gx < 4; gx++) {
+          g.appendChild(_el('line', {
+            x1: w * gx / 4, y1: 0, x2: w * gx / 4, y2: h,
+            stroke: '#333', 'stroke-width': 0.5
+          }));
+        }
+        for (var gy = 1; gy < 4; gy++) {
+          g.appendChild(_el('line', {
+            x1: 0, y1: h * gy / 4, x2: w, y2: h * gy / 4,
+            stroke: '#333', 'stroke-width': 0.5
+          }));
+        }
+
+        // Crosshair at center
+        g.appendChild(_el('line', {
+          x1: w / 2, y1: 0, x2: w / 2, y2: h,
+          stroke: data.color, 'stroke-width': 0.5, 'stroke-opacity': 0.3
+        }));
+        g.appendChild(_el('line', {
+          x1: 0, y1: h / 2, x2: w, y2: h / 2,
+          stroke: data.color, 'stroke-width': 0.5, 'stroke-opacity': 0.3
+        }));
+
+        // Position dot
+        g.appendChild(_el('circle', {
+          cx: w / 2, cy: h / 2, r: 5,
+          fill: data.color, 'fill-opacity': 0.8
+        }));
+        g.appendChild(_el('circle', {
+          cx: w / 2, cy: h / 2, r: 5,
+          fill: 'none', stroke: data.color, 'stroke-width': 1, 'stroke-opacity': 0.4
+        }));
+
+        return g;
+      },
+      getEditableProperties: function() {
+        return [
+          { name: 'x-label', type: 'text', label: 'X axis' },
+          { name: 'y-label', type: 'text', label: 'Y axis' },
+        ];
+      }
+    });
+
+    // ============================================================
+    // DISPLAY COMPONENTS
+    // ============================================================
+
+    // --- Level Meter ---
+    App.components.register('level_meter', {
+      category: 'Display',
+      displayName: 'Meter',
+      defaultProps: {
+        width: 16, height: 80, color: '#66bb6a', label: '',
+        properties: { orientation: 'vertical', segments: 12 }
+      },
+      render: function(data) {
+        var g = _el('g');
+        var isVert = data.properties.orientation !== 'horizontal';
+        var segs = data.properties.segments || 12;
+        var gap = 2;
+        var segW, segH;
+
+        if (isVert) {
+          segH = (data.height - (segs - 1) * gap) / segs;
+          segW = data.width;
+          for (var si = 0; si < segs; si++) {
+            var sy = data.height - (si + 1) * (segH + gap) + gap;
+            var pct = si / segs;
+            var col = pct < 0.6 ? '#66bb6a' : pct < 0.8 ? '#ffd54f' : '#ef5350';
+            var lit = si < segs * 0.65;
+            g.appendChild(_el('rect', {
+              x: 0, y: sy, width: segW, height: segH,
+              rx: 1, fill: col, 'fill-opacity': lit ? 0.9 : 0.15
+            }));
+          }
+        } else {
+          segW = (data.width - (segs - 1) * gap) / segs;
+          segH = data.height;
+          for (var sj = 0; sj < segs; sj++) {
+            var sx = sj * (segW + gap);
+            var pctH = sj / segs;
+            var colH = pctH < 0.6 ? '#66bb6a' : pctH < 0.8 ? '#ffd54f' : '#ef5350';
+            var litH = sj < segs * 0.65;
+            g.appendChild(_el('rect', {
+              x: sx, y: 0, width: segW, height: segH,
+              rx: 1, fill: colH, 'fill-opacity': litH ? 0.9 : 0.15
+            }));
+          }
+        }
+        return g;
+      },
+      getEditableProperties: function() {
+        return [
+          { name: 'orientation', type: 'text', label: 'Dir' },
+          { name: 'segments', type: 'number', label: 'Segs' },
+        ];
+      }
+    });
+
+    // --- Waveform Display ---
+    App.components.register('waveform_display', {
+      category: 'Display',
+      displayName: 'Waveform',
+      defaultProps: {
+        width: 200, height: 80, color: '#4fc3f7', label: '',
+        properties: {}
+      },
+      render: function(data) {
+        var g = _el('g');
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: data.width, height: data.height,
+          rx: 3, fill: '#0a0a1a', stroke: '#333', 'stroke-width': 0.5
+        }));
+
+        // Procedural sine wave
+        var points = [];
+        var midY = data.height / 2;
+        var amp = data.height * 0.35;
+        for (var px = 0; px <= data.width; px += 2) {
+          var py = midY + Math.sin(px * 0.04) * amp * Math.sin(px * 0.01 + 1);
+          points.push((px === 0 ? 'M ' : 'L ') + px + ' ' + py);
+        }
+        g.appendChild(_el('path', {
+          d: points.join(' '),
+          fill: 'none', stroke: data.color, 'stroke-width': 1.5, 'stroke-opacity': 0.8
+        }));
+
+        // Center line
+        g.appendChild(_el('line', {
+          x1: 0, y1: midY, x2: data.width, y2: midY,
+          stroke: '#333', 'stroke-width': 0.5
+        }));
+        return g;
+      },
+      getEditableProperties: function() { return []; }
+    });
+
+    // --- Spectrum Analyzer ---
+    App.components.register('spectrum_analyzer', {
+      category: 'Display',
+      displayName: 'Spectrum',
+      defaultProps: {
+        width: 200, height: 80, color: '#4fc3f7', label: '',
+        properties: { bars: 24 }
+      },
+      render: function(data) {
+        var g = _el('g');
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: data.width, height: data.height,
+          rx: 3, fill: '#0a0a1a', stroke: '#333', 'stroke-width': 0.5
+        }));
+
+        var bars = data.properties.bars || 24;
+        var gap = 2;
+        var barW = (data.width - (bars + 1) * gap) / bars;
+        for (var bi = 0; bi < bars; bi++) {
+          // Decorative pseudo-random heights using a simple pattern
+          var h = data.height * (0.3 + 0.5 * Math.abs(Math.sin(bi * 0.7 + 0.5)) * Math.cos(bi * 0.3));
+          var bx = gap + bi * (barW + gap);
+          g.appendChild(_el('rect', {
+            x: bx, y: data.height - h, width: barW, height: h,
+            rx: 1, fill: data.color, 'fill-opacity': 0.7
+          }));
+        }
+        return g;
+      },
+      getEditableProperties: function() {
+        return [{ name: 'bars', type: 'number', label: 'Bars' }];
+      }
+    });
+
+    // --- Step Sequencer ---
+    App.components.register('step_sequencer', {
+      category: 'Display',
+      displayName: 'Step Seq',
+      defaultProps: {
+        width: 400, height: 48, color: '#4fc3f7', label: '',
+        properties: { rows: 1, columns: 16, cellSize: 24, activeColor: '#4fc3f7', pattern: '' }
+      },
+      render: function(data) {
+        var g = _el('g');
+        var rows = data.properties.rows || 1;
+        var cols = data.properties.columns || 16;
+        var cs = data.properties.cellSize || 24;
+        var gap = 2;
+        var pattern = (data.properties.pattern || '').split(',');
+
+        for (var row = 0; row < rows; row++) {
+          for (var col = 0; col < cols; col++) {
+            var key = row + '_' + col;
+            var active = pattern.indexOf(key) !== -1;
+            var cx = col * (cs + gap);
+            var cy = row * (cs + gap);
+            g.appendChild(_el('rect', {
+              x: cx, y: cy, width: cs, height: cs,
+              rx: 2,
+              fill: active ? (data.properties.activeColor || data.color) : '#1a1a2a',
+              stroke: active ? data.color : '#333',
+              'stroke-width': 0.5,
+              'data-cell': key
+            }));
+          }
+        }
+
+        // Adjust actual component size to match grid
+        data.width = cols * (cs + gap) - gap;
+        data.height = rows * (cs + gap) - gap;
+        return g;
+      },
+      getEditableProperties: function() {
+        return [
+          { name: 'rows', type: 'number', label: 'Rows' },
+          { name: 'columns', type: 'number', label: 'Cols' },
+          { name: 'cellSize', type: 'number', label: 'Cell' },
+          { name: 'pattern', type: 'text', label: 'Active' },
+        ];
+      }
+    });
+
+    // --- Label / Text ---
+    App.components.register('label_text', {
+      category: 'Display',
+      displayName: 'Label',
+      defaultProps: {
+        width: 80, height: 20, color: '#ffffff', label: 'Label',
+        properties: { fontSize: 14, bold: false, italic: false, fontFamily: 'system-ui' }
+      },
+      render: function(data) {
+        var g = _el('g');
+        var fs = data.properties.fontSize || 14;
+        var fw = data.properties.bold ? 'bold' : 'normal';
+        var fst = data.properties.italic ? 'italic' : 'normal';
+        var ff = data.properties.fontFamily || 'system-ui, sans-serif';
+
+        var text = _el('text', {
+          x: 0, y: fs,
+          fill: data.color, 'font-size': fs,
+          'font-weight': fw, 'font-style': fst,
+          'font-family': ff
+        });
+        text.textContent = data.label;
+        g.appendChild(text);
+
+        // Invisible hit area
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: data.width, height: data.height,
+          fill: 'transparent'
+        }));
+        return g;
+      },
+      getEditableProperties: function() {
+        return [
+          { name: 'fontSize', type: 'number', label: 'Size' },
+          { name: 'bold', type: 'checkbox', label: 'Bold' },
+          { name: 'italic', type: 'checkbox', label: 'Italic' },
+          { name: 'fontFamily', type: 'text', label: 'Font' },
+        ];
+      }
+    });
+
+    // --- LED Indicator ---
+    App.components.register('led_indicator', {
+      category: 'Display',
+      displayName: 'LED',
+      defaultProps: {
+        width: 12, height: 12, color: '#ef5350', label: '',
+        properties: { on: true }
+      },
+      render: function(data) {
+        var g = _el('g');
+        var r = Math.min(data.width, data.height) / 2;
+        var isOn = data.properties.on;
+
+        // Outer ring
+        g.appendChild(_el('circle', {
+          cx: r, cy: r, r: r,
+          fill: data.color,
+          'fill-opacity': isOn ? 0.9 : 0.15,
+          stroke: data.color, 'stroke-width': 0.5, 'stroke-opacity': 0.5
+        }));
+
+        // Highlight
+        if (isOn) {
+          g.appendChild(_el('circle', {
+            cx: r - r * 0.2, cy: r - r * 0.2, r: r * 0.3,
+            fill: '#fff', 'fill-opacity': 0.3
+          }));
+        }
+        return g;
+      },
+      getEditableProperties: function() {
+        return [{ name: 'on', type: 'checkbox', label: 'On' }];
+      }
+    });
+
+    // --- Value Readout ---
+    App.components.register('value_readout', {
+      category: 'Display',
+      displayName: 'Readout',
+      defaultProps: {
+        width: 72, height: 24, color: '#4fc3f7', label: '',
+        properties: { value: '440', unit: 'Hz', fontSize: 13 }
+      },
+      render: function(data) {
+        var g = _el('g');
+        var fs = data.properties.fontSize || 13;
+
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: data.width, height: data.height,
+          rx: 3, fill: '#111', stroke: '#333', 'stroke-width': 0.5
+        }));
+
+        var text = _el('text', {
+          x: data.width / 2, y: data.height / 2 + fs * 0.35,
+          'text-anchor': 'middle', fill: data.color,
+          'font-size': fs, 'font-family': 'monospace'
+        });
+        text.textContent = (data.properties.value || '0') + (data.properties.unit ? ' ' + data.properties.unit : '');
+        g.appendChild(text);
+        return g;
+      },
+      getEditableProperties: function() {
+        return [
+          { name: 'value', type: 'text', label: 'Value' },
+          { name: 'unit', type: 'text', label: 'Unit' },
+          { name: 'fontSize', type: 'number', label: 'Size' },
+        ];
+      }
+    });
+
+    // ============================================================
+    // LAYOUT COMPONENTS
+    // ============================================================
+
+    // --- Panel / Group Box ---
+    App.components.register('panel_group', {
+      category: 'Layout',
+      displayName: 'Panel',
+      defaultProps: {
+        width: 200, height: 150, color: '#555', label: 'Section',
+        properties: { bgColor: '', bgOpacity: 0.3, cornerRadius: 6, borderWidth: 1 }
+      },
+      render: function(data) {
+        var g = _el('g');
+        var cr = data.properties.cornerRadius || 6;
+        var bw = data.properties.borderWidth || 1;
+        var bgFill = data.properties.bgColor || data.color;
+
+        // Background
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: data.width, height: data.height,
+          rx: cr, fill: bgFill,
+          'fill-opacity': data.properties.bgOpacity || 0.5,
+          stroke: data.color, 'stroke-width': bw
+        }));
+
+        // Title
+        if (data.label) {
+          // Title background
+          var textWidth = data.label.length * 7 + 12;
+          g.appendChild(_el('rect', {
+            x: 10, y: -6, width: textWidth, height: 12,
+            fill: '#151528'
+          }));
+          var text = _el('text', {
+            x: 16, y: 4,
+            fill: data.color, 'font-size': 10, 'fill-opacity': 0.7,
+            'font-family': 'system-ui, sans-serif'
+          });
+          text.textContent = data.label;
+          g.appendChild(text);
+        }
+        return g;
+      },
+      getEditableProperties: function() {
+        return [
+          { name: 'bgColor', type: 'text', label: 'BG' },
+          { name: 'bgOpacity', type: 'number', label: 'Opacity' },
+          { name: 'cornerRadius', type: 'number', label: 'Radius' },
+          { name: 'borderWidth', type: 'number', label: 'Border' },
+        ];
+      }
+    });
+
+    // --- Separator ---
+    App.components.register('separator', {
+      category: 'Layout',
+      displayName: 'Separator',
+      defaultProps: {
+        width: 100, height: 4, color: '#444', label: '',
+        properties: { orientation: 'horizontal', thickness: 1 }
+      },
+      render: function(data) {
+        var g = _el('g');
+        var isH = data.properties.orientation !== 'vertical';
+        var th = data.properties.thickness || 1;
+
+        if (isH) {
+          g.appendChild(_el('line', {
+            x1: 0, y1: data.height / 2, x2: data.width, y2: data.height / 2,
+            stroke: data.color, 'stroke-width': th
+          }));
+        } else {
+          g.appendChild(_el('line', {
+            x1: data.width / 2, y1: 0, x2: data.width / 2, y2: data.height,
+            stroke: data.color, 'stroke-width': th
+          }));
+        }
+
+        // Invisible hit area
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: data.width, height: data.height,
+          fill: 'transparent'
+        }));
+        return g;
+      },
+      getEditableProperties: function() {
+        return [
+          { name: 'orientation', type: 'text', label: 'Dir' },
+          { name: 'thickness', type: 'number', label: 'Width' },
+        ];
+      }
+    });
+
+    // --- Section Header ---
+    App.components.register('section_header', {
+      category: 'Layout',
+      displayName: 'Header',
+      defaultProps: {
+        width: 150, height: 22, color: '#ccc', label: 'SECTION',
+        properties: { fontSize: 12 }
+      },
+      render: function(data) {
+        var g = _el('g');
+        var fs = data.properties.fontSize || 12;
+
+        var text = _el('text', {
+          x: 0, y: fs,
+          fill: data.color, 'font-size': fs,
+          'font-weight': 'bold', 'font-family': 'system-ui, sans-serif',
+          'letter-spacing': 1
+        });
+        text.textContent = data.label;
+        g.appendChild(text);
+
+        // Underline
+        g.appendChild(_el('line', {
+          x1: 0, y1: fs + 4, x2: data.width, y2: fs + 4,
+          stroke: data.color, 'stroke-width': 0.5, 'stroke-opacity': 0.4
+        }));
+
+        // Invisible hit area
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: data.width, height: data.height,
+          fill: 'transparent'
+        }));
+        return g;
+      },
+      getEditableProperties: function() {
+        return [{ name: 'fontSize', type: 'number', label: 'Size' }];
+      }
+    });
+
+    // --- Image Placeholder ---
+    App.components.register('image_placeholder', {
+      category: 'Layout',
+      displayName: 'Image',
+      defaultProps: {
+        width: 120, height: 80, color: '#555', label: 'Logo',
+        properties: {}
+      },
+      render: function(data) {
+        var g = _el('g');
+
+        // Border
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: data.width, height: data.height,
+          rx: 2, fill: 'none', stroke: data.color, 'stroke-width': 1,
+          'stroke-dasharray': '4,4'
+        }));
+
+        // Diagonal cross
+        g.appendChild(_el('line', {
+          x1: 0, y1: 0, x2: data.width, y2: data.height,
+          stroke: data.color, 'stroke-width': 0.5, 'stroke-opacity': 0.3
+        }));
+        g.appendChild(_el('line', {
+          x1: data.width, y1: 0, x2: 0, y2: data.height,
+          stroke: data.color, 'stroke-width': 0.5, 'stroke-opacity': 0.3
+        }));
+
+        // Center label
+        var text = _el('text', {
+          x: data.width / 2, y: data.height / 2 + 4,
+          'text-anchor': 'middle', fill: data.color,
+          'font-size': 11, 'font-family': 'system-ui, sans-serif'
+        });
+        text.textContent = data.label;
+        g.appendChild(text);
+        return g;
+      },
+      getEditableProperties: function() { return []; }
+    });
+  },
+
+  // ============================================================
+  // SELECTION
+  // ============================================================
+  selection: {
+    select: function(id) {
+      // Expand to group if component is grouped
+      App.state.selectedIds = App.groups.expandSelection([id]);
+      this.renderHandles();
+      if (App.state.selectedIds.length === 1) {
+        App.properties.show(App.components.getById(id));
+      }
+    },
+
+    addToSelection: function(id) {
+      if (App.state.selectedIds.indexOf(id) === -1) {
+        App.state.selectedIds.push(id);
+      }
+      this.renderHandles();
+    },
+
+    clear: function() {
+      App.state.selectedIds = [];
+      while (App.canvas.selectionLayer.firstChild) {
+        App.canvas.selectionLayer.removeChild(App.canvas.selectionLayer.firstChild);
+      }
+      App.properties.hide();
+      if (App.layers) App.layers.render();
+    },
+
+    isSelected: function(id) {
+      return App.state.selectedIds.indexOf(id) !== -1;
+    },
+
+    renderHandles: function() {
+      while (App.canvas.selectionLayer.firstChild) {
+        App.canvas.selectionLayer.removeChild(App.canvas.selectionLayer.firstChild);
+      }
+      var _el = App.canvas._el.bind(App.canvas);
+      for (var s = 0; s < App.state.selectedIds.length; s++) {
+        var id = App.state.selectedIds[s];
+        var data = App.components.getById(id);
+        if (!data) continue;
+
+        var g = _el('g', { 'data-selection-for': data.id });
+        g.setAttribute('transform', 'translate(' + data.x + ', ' + data.y + ')');
+
+        // Dashed border
+        g.appendChild(_el('rect', {
+          x: -2, y: -2,
+          width: data.width + 4, height: data.height + 4,
+          fill: 'none', stroke: '#4fc3f7', 'stroke-width': 0.8,
+          'stroke-dasharray': '4,3'
+        }));
+
+        // 8 handles
+        var hs = 6;
+        var positions = [
+          { x: -hs / 2 - 2, y: -hs / 2 - 2, cursor: 'nwse-resize', pos: 'tl' },
+          { x: data.width / 2 - hs / 2, y: -hs / 2 - 2, cursor: 'ns-resize', pos: 'tc' },
+          { x: data.width + 2 - hs / 2, y: -hs / 2 - 2, cursor: 'nesw-resize', pos: 'tr' },
+          { x: data.width + 2 - hs / 2, y: data.height / 2 - hs / 2, cursor: 'ew-resize', pos: 'mr' },
+          { x: data.width + 2 - hs / 2, y: data.height + 2 - hs / 2, cursor: 'nwse-resize', pos: 'br' },
+          { x: data.width / 2 - hs / 2, y: data.height + 2 - hs / 2, cursor: 'ns-resize', pos: 'bc' },
+          { x: -hs / 2 - 2, y: data.height + 2 - hs / 2, cursor: 'nesw-resize', pos: 'bl' },
+          { x: -hs / 2 - 2, y: data.height / 2 - hs / 2, cursor: 'ew-resize', pos: 'ml' },
+        ];
+        for (var p = 0; p < positions.length; p++) {
+          var pos = positions[p];
+          var handle = _el('rect', {
+            x: pos.x, y: pos.y, width: hs, height: hs,
+            fill: '#4fc3f7', stroke: '#0d0d1a', 'stroke-width': 1,
+            'data-handle': pos.pos, rx: 1
+          });
+          handle.style.cursor = pos.cursor;
+          g.appendChild(handle);
+        }
+
+        App.canvas.selectionLayer.appendChild(g);
+      }
+      // Refresh layers panel to reflect selection
+      if (App.layers) App.layers.render();
+    },
+
+    deleteSelected: function() {
+      var ids = App.state.selectedIds.slice();
+      if (ids.length === 0) return;
+      var removed = [];
+      for (var i = 0; i < ids.length; i++) {
+        var idx = App.state.components.findIndex(function(c) { return c.id === ids[i]; });
+        if (idx !== -1) {
+          removed.push({ data: JSON.parse(JSON.stringify(App.state.components[idx])), idx: idx });
+        }
+      }
+      for (var j = 0; j < ids.length; j++) {
+        App.components.remove(ids[j], true);
+      }
+      App.history.push({
+        type: 'delete-batch',
+        undo: function() {
+          var sorted = removed.slice().sort(function(a, b) { return a.idx - b.idx; });
+          for (var k = 0; k < sorted.length; k++) {
+            App.state.components.splice(sorted[k].idx, 0, sorted[k].data);
+            App.components.renderOne(sorted[k].data);
+          }
+        },
+        redo: function() {
+          for (var k = 0; k < removed.length; k++) {
+            App.components.remove(removed[k].data.id, true);
+          }
+        }
+      });
+      this.clear();
+    },
+
+    selectAll: function() {
+      App.state.selectedIds = App.state.components.map(function(c) { return c.id; });
+      this.renderHandles();
+      if (App.state.selectedIds.length === 1) {
+        App.properties.show(App.components.getById(App.state.selectedIds[0]));
+      }
+    }
+  },
+
+  // ============================================================
+  // PROPERTIES PANEL
+  // ============================================================
+  properties: {
+    _currentId: null,
+
+    show: function(data) {
+      if (!data) return;
+      this._currentId = data.id;
+      var panel = document.getElementById('properties-panel');
+      // Clear panel safely
+      while (panel.firstChild) {
+        panel.removeChild(panel.firstChild);
+      }
+
+      // Type header (not collapsible)
+      var factory = App.components.registry[data.type];
+      var h = document.createElement('div');
+      h.className = 'props-heading';
+      h.style.cursor = 'default';
+      h.textContent = factory ? factory.displayName : data.type;
+      panel.appendChild(h);
+
+      // Label
+      this._addField(panel, 'Label', 'text', data.label, function(v) {
+        data.label = v;
+        App.components.renderOne(data);
+        App.selection.renderHandles();
+      });
+
+      // Position section (collapsible)
+      var posSection = this._addSection(panel, 'Position');
+
+      var posRow = document.createElement('div');
+      posRow.className = 'props-row';
+      this._addSmallNum(posRow, 'X', data.x, function(v) {
+        data.x = v;
+        App.components.updatePosition(data.id, data.x, data.y);
+        App.selection.renderHandles();
+      });
+      this._addSmallNum(posRow, 'Y', data.y, function(v) {
+        data.y = v;
+        App.components.updatePosition(data.id, data.x, data.y);
+        App.selection.renderHandles();
+      });
+      posSection.appendChild(posRow);
+
+      var sizeRow = document.createElement('div');
+      sizeRow.className = 'props-row';
+      this._addSmallNum(sizeRow, 'W', data.width, function(v) {
+        data.width = Math.max(10, v);
+        App.components.renderOne(data);
+        App.selection.renderHandles();
+      });
+      this._addSmallNum(sizeRow, 'H', data.height, function(v) {
+        data.height = Math.max(10, v);
+        App.components.renderOne(data);
+        App.selection.renderHandles();
+      });
+      posSection.appendChild(sizeRow);
+
+      // Color section (collapsible)
+      var colorSection = this._addSection(panel, 'Color');
+
+      var swatches = document.createElement('div');
+      swatches.className = 'color-swatches';
+      for (var i = 0; i < App.COLORS.length; i++) {
+        (function(c) {
+          var s = document.createElement('div');
+          s.className = 'color-swatch' + (c === data.color ? ' active' : '');
+          s.style.background = c;
+          s.addEventListener('click', function() {
+            data.color = c;
+            App.components.renderOne(data);
+            App.selection.renderHandles();
+            var allSwatches = swatches.querySelectorAll('.color-swatch');
+            for (var j = 0; j < allSwatches.length; j++) {
+              allSwatches[j].classList.remove('active');
+            }
+            s.classList.add('active');
+            hexInput.value = c;
+          });
+          swatches.appendChild(s);
+        })(App.COLORS[i]);
+      }
+      colorSection.appendChild(swatches);
+
+      var hexRow = document.createElement('div');
+      hexRow.className = 'props-row';
+      var hexLabel = document.createElement('span');
+      hexLabel.className = 'props-label';
+      hexLabel.textContent = 'Hex';
+      hexRow.appendChild(hexLabel);
+      var hexInput = document.createElement('input');
+      hexInput.className = 'props-input';
+      hexInput.value = data.color;
+      hexInput.addEventListener('change', function() {
+        var v = hexInput.value;
+        if (/^#[0-9a-fA-F]{3,8}$/.test(v)) {
+          data.color = v;
+          App.components.renderOne(data);
+          App.selection.renderHandles();
+        }
+      });
+      hexRow.appendChild(hexInput);
+      colorSection.appendChild(hexRow);
+
+      // Type-specific properties (collapsible)
+      if (factory && factory.getEditableProperties) {
+        var props = factory.getEditableProperties();
+        if (props.length > 0) {
+          var paramSection = this._addSection(panel, 'Parameters');
+
+          for (var p = 0; p < props.length; p++) {
+            (function(prop) {
+              App.properties._addField(paramSection, prop.label, prop.type, data.properties[prop.name], function(v) {
+                data.properties[prop.name] = v;
+                App.components.renderOne(data);
+                App.selection.renderHandles();
+              });
+            })(props[p]);
+          }
+        }
+      }
+
+      // Effects section (collapsible, collapsed by default)
+      this._buildEffectsSection(panel, data);
+    },
+
+    // Create a collapsible section: heading + content div. Returns the content div.
+    _addSection: function(panel, title, startCollapsed) {
+      var heading = document.createElement('div');
+      heading.className = 'props-heading' + (startCollapsed ? ' collapsed' : '');
+      heading.textContent = title;
+
+      var content = document.createElement('div');
+      content.className = 'props-section' + (startCollapsed ? ' collapsed' : '');
+
+      heading.addEventListener('click', function() {
+        heading.classList.toggle('collapsed');
+        content.classList.toggle('collapsed');
+      });
+
+      panel.appendChild(heading);
+      panel.appendChild(content);
+      return content;
+    },
+
+    _buildEffectsSection: function(panel, data) {
+      // Ensure effects object exists with all keys
+      if (!data.effects) data.effects = {};
+      var effectKeys = Object.keys(App.effects.EFFECT_NAMES);
+      for (var ek = 0; ek < effectKeys.length; ek++) {
+        var key = effectKeys[ek];
+        if (!data.effects[key]) {
+          data.effects[key] = { enabled: false, intensity: 50 };
+          if (key === 'gradient_fill') {
+            data.effects[key].startColor = '#ffffff';
+            data.effects[key].endColor = '#000000';
+            data.effects[key].angle = 0;
+          }
+          if (key === 'texture_fill') {
+            data.effects[key].preset = 'noise';
+          }
+        }
+      }
+
+      var fxContainer = this._addSection(panel, 'Effects', true);
+
+      for (var i = 0; i < effectKeys.length; i++) {
+        (function(key) {
+          var fx = data.effects[key];
+          var name = App.effects.EFFECT_NAMES[key];
+
+          var row = document.createElement('div');
+          row.style.marginBottom = '6px';
+
+          // Toggle + name row
+          var toggleRow = document.createElement('div');
+          toggleRow.className = 'props-row';
+
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = fx.enabled;
+          cb.style.marginRight = '4px';
+          cb.style.accentColor = '#4fc3f7';
+          toggleRow.appendChild(cb);
+
+          var lbl = document.createElement('span');
+          lbl.style.fontSize = '11px';
+          lbl.style.flex = '1';
+          lbl.textContent = name;
+          toggleRow.appendChild(lbl);
+
+          row.appendChild(toggleRow);
+
+          // Intensity slider (shown when enabled)
+          var controls = document.createElement('div');
+          controls.style.display = fx.enabled ? 'block' : 'none';
+          controls.style.marginLeft = '20px';
+
+          // Intensity
+          var intRow = document.createElement('div');
+          intRow.className = 'props-row';
+          var intLbl = document.createElement('span');
+          intLbl.className = 'props-label';
+          intLbl.textContent = 'Int';
+          intRow.appendChild(intLbl);
+          var intSlider = document.createElement('input');
+          intSlider.type = 'range';
+          intSlider.min = 0;
+          intSlider.max = 100;
+          intSlider.value = fx.intensity || 50;
+          intSlider.style.flex = '1';
+          intSlider.style.accentColor = '#4fc3f7';
+          intRow.appendChild(intSlider);
+          var intVal = document.createElement('span');
+          intVal.style.fontSize = '10px';
+          intVal.style.color = '#888';
+          intVal.style.width = '24px';
+          intVal.style.textAlign = 'right';
+          intVal.textContent = intSlider.value;
+          intRow.appendChild(intVal);
+          controls.appendChild(intRow);
+
+          // Extra controls for gradient
+          if (key === 'gradient_fill') {
+            var gradRow1 = document.createElement('div');
+            gradRow1.className = 'props-row';
+            App.properties._addSmallColorInput(gradRow1, 'Start', fx.startColor || '#ffffff', function(v) {
+              fx.startColor = v;
+              App.components.renderOne(data);
+              App.selection.renderHandles();
+            });
+            App.properties._addSmallColorInput(gradRow1, 'End', fx.endColor || '#000000', function(v) {
+              fx.endColor = v;
+              App.components.renderOne(data);
+              App.selection.renderHandles();
+            });
+            controls.appendChild(gradRow1);
+
+            var angleRow = document.createElement('div');
+            angleRow.className = 'props-row';
+            var aLbl = document.createElement('span');
+            aLbl.className = 'props-label';
+            aLbl.textContent = 'Angle';
+            angleRow.appendChild(aLbl);
+            var aInput = document.createElement('input');
+            aInput.className = 'props-input props-input-sm';
+            aInput.type = 'number';
+            aInput.min = 0;
+            aInput.max = 360;
+            aInput.value = fx.angle || 0;
+            aInput.addEventListener('change', function() {
+              fx.angle = parseInt(aInput.value) || 0;
+              App.components.renderOne(data);
+              App.selection.renderHandles();
+            });
+            angleRow.appendChild(aInput);
+            controls.appendChild(angleRow);
+          }
+
+          // Extra controls for texture
+          if (key === 'texture_fill') {
+            var texRow = document.createElement('div');
+            texRow.className = 'props-row';
+            var texLbl = document.createElement('span');
+            texLbl.className = 'props-label';
+            texLbl.textContent = 'Type';
+            texRow.appendChild(texLbl);
+            var texSelect = document.createElement('select');
+            texSelect.className = 'props-input';
+            var presets = App.effects.TEXTURE_PRESETS;
+            for (var ti = 0; ti < presets.length; ti++) {
+              var opt = document.createElement('option');
+              opt.value = presets[ti];
+              opt.textContent = presets[ti].replace(/_/g, ' ');
+              if (presets[ti] === (fx.preset || 'noise')) opt.selected = true;
+              texSelect.appendChild(opt);
+            }
+            texSelect.addEventListener('change', function() {
+              fx.preset = texSelect.value;
+              App.components.renderOne(data);
+              App.selection.renderHandles();
+            });
+            texRow.appendChild(texSelect);
+            controls.appendChild(texRow);
+          }
+
+          row.appendChild(controls);
+
+          // Event handlers
+          cb.addEventListener('change', function() {
+            fx.enabled = cb.checked;
+            controls.style.display = cb.checked ? 'block' : 'none';
+            App.components.renderOne(data);
+            App.selection.renderHandles();
+          });
+
+          intSlider.addEventListener('input', function() {
+            fx.intensity = parseInt(intSlider.value);
+            intVal.textContent = intSlider.value;
+            App.components.renderOne(data);
+            App.selection.renderHandles();
+          });
+
+          fxContainer.appendChild(row);
+        })(effectKeys[i]);
+      }
+    },
+
+    _addSmallColorInput: function(parent, label, value, onChange) {
+      var lbl = document.createElement('span');
+      lbl.className = 'props-label';
+      lbl.textContent = label;
+      var inp = document.createElement('input');
+      inp.type = 'color';
+      inp.value = value;
+      inp.style.width = '32px';
+      inp.style.height = '20px';
+      inp.style.border = 'none';
+      inp.style.background = 'transparent';
+      inp.style.cursor = 'pointer';
+      inp.addEventListener('input', function() { onChange(inp.value); });
+      parent.appendChild(lbl);
+      parent.appendChild(inp);
+    },
+
+    hide: function() {
+      this._currentId = null;
+      var panel = document.getElementById('properties-panel');
+      while (panel.firstChild) panel.removeChild(panel.firstChild);
+    },
+
+    _addField: function(parent, label, type, value, onChange) {
+      var row = document.createElement('div');
+      row.className = 'props-row';
+      var lbl = document.createElement('span');
+      lbl.className = 'props-label';
+      lbl.textContent = label;
+      row.appendChild(lbl);
+      var inp = document.createElement('input');
+      inp.className = 'props-input';
+      inp.type = type === 'number' ? 'number' : 'text';
+      inp.value = value != null ? value : '';
+      inp.addEventListener('change', function() {
+        onChange(type === 'number' ? parseFloat(inp.value) || 0 : inp.value);
+      });
+      row.appendChild(inp);
+      parent.appendChild(row);
+    },
+
+    _addSmallNum: function(parent, label, value, onChange) {
+      var lbl = document.createElement('span');
+      lbl.className = 'props-label';
+      lbl.textContent = label;
+      var inp = document.createElement('input');
+      inp.className = 'props-input props-input-sm';
+      inp.type = 'number';
+      inp.value = Math.round(value);
+      inp.addEventListener('change', function() {
+        onChange(parseInt(inp.value) || 0);
+      });
+      parent.appendChild(lbl);
+      parent.appendChild(inp);
+    },
+
+    refresh: function() {
+      if (this._currentId) {
+        var data = App.components.getById(this._currentId);
+        if (data) this.show(data);
+      }
+    }
+  },
+
+  // ============================================================
+  // PALETTE
+  // ============================================================
+  palette: {
+    _placingType: null,
+    _dragging: false,
+    _dragType: null,
+    _dragGhost: null,
+    _dragStartX: 0,
+    _dragStartY: 0,
+    _dragThreshold: 4,
+
+    init: function() {
+      var container = document.getElementById('palette');
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+
+      // Search input
+      var search = document.createElement('input');
+      search.className = 'palette-search';
+      search.type = 'text';
+      search.placeholder = 'Search components...';
+      container.appendChild(search);
+
+      // Group by category
+      var categories = {};
+      var types = Object.keys(App.components.registry);
+      for (var i = 0; i < types.length; i++) {
+        var type = types[i];
+        var factory = App.components.registry[type];
+        var cat = factory.category || 'Other';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push({ type: type, factory: factory });
+      }
+
+      var catNames = Object.keys(categories);
+      for (var c = 0; c < catNames.length; c++) {
+        var catName = catNames[c];
+        var items = categories[catName].sort(function(a, b) {
+          return a.factory.displayName.localeCompare(b.factory.displayName);
+        });
+
+        var catDiv = document.createElement('div');
+        catDiv.className = 'palette-category';
+        catDiv.setAttribute('data-category', catName);
+
+        var heading = document.createElement('div');
+        heading.className = 'palette-heading';
+        heading.textContent = catName;
+        heading.addEventListener('click', (function(catEl, headEl) {
+          return function() {
+            catEl.classList.toggle('collapsed');
+            headEl.classList.toggle('collapsed');
+          };
+        })(catDiv, heading));
+        catDiv.appendChild(heading);
+
+        for (var j = 0; j < items.length; j++) {
+          (function(itemType, itemFactory) {
+            var item = document.createElement('div');
+            item.className = 'palette-item';
+            item.setAttribute('data-type', itemType);
+            item.setAttribute('data-search', itemFactory.displayName.toLowerCase() + ' ' + itemType.replace(/_/g, ' '));
+
+            // Icon — uses trusted static SVG strings (not user input)
+            var icon = document.createElement('div');
+            icon.className = 'palette-icon';
+            var iconSvg = App.palette._getIconElement(itemType);
+            icon.appendChild(iconSvg);
+            item.appendChild(icon);
+
+            // Label
+            var label = document.createElement('span');
+            label.className = 'palette-label';
+            label.textContent = itemFactory.displayName;
+            item.appendChild(label);
+
+            // Mousedown starts potential drag
+            item.addEventListener('mousedown', function(e) {
+              if (e.button !== 0) return;
+              e.preventDefault();
+              App.palette._dragStartX = e.clientX;
+              App.palette._dragStartY = e.clientY;
+              App.palette._dragType = itemType;
+              App.palette._dragging = false;
+            });
+
+            // Click fallback — only fires if drag didn't happen
+            item.addEventListener('click', function() {
+              if (!App.palette._dragging) {
+                App.palette.setPlacing(itemType);
+              }
+            });
+
+            catDiv.appendChild(item);
+          })(items[j].type, items[j].factory);
+        }
+
+        container.appendChild(catDiv);
+      }
+
+      // Palette drag-to-canvas handlers (on window so drag works outside palette)
+      window.addEventListener('mousemove', function(e) {
+        if (App.palette._dragType === null) return;
+
+        if (!App.palette._dragging) {
+          // Check threshold before starting drag
+          var dx = Math.abs(e.clientX - App.palette._dragStartX);
+          var dy = Math.abs(e.clientY - App.palette._dragStartY);
+          if (dx < App.palette._dragThreshold && dy < App.palette._dragThreshold) return;
+
+          // Start drag — create ghost
+          App.palette._dragging = true;
+          var factory = App.components.registry[App.palette._dragType];
+          var ghost = document.createElement('div');
+          ghost.className = 'palette-drag-ghost';
+          ghost.textContent = factory ? factory.displayName : App.palette._dragType;
+          document.body.appendChild(ghost);
+          App.palette._dragGhost = ghost;
+          document.body.style.cursor = 'grabbing';
+        }
+
+        // Move ghost
+        if (App.palette._dragGhost) {
+          App.palette._dragGhost.style.left = (e.clientX + 12) + 'px';
+          App.palette._dragGhost.style.top = (e.clientY - 12) + 'px';
+        }
+      });
+
+      window.addEventListener('mouseup', function(e) {
+        if (App.palette._dragType === null) return;
+        var wasDragging = App.palette._dragging;
+        var dragType = App.palette._dragType;
+
+        // Clean up ghost
+        if (App.palette._dragGhost) {
+          App.palette._dragGhost.remove();
+          App.palette._dragGhost = null;
+        }
+        App.palette._dragType = null;
+        App.palette._dragging = false;
+        document.body.style.cursor = '';
+
+        if (!wasDragging) return;
+
+        // Check if dropped over canvas
+        var canvasContainer = document.getElementById('canvas-container');
+        var rect = canvasContainer.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX <= rect.right &&
+            e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          var pt = App.canvas.screenToCanvas(e.clientX, e.clientY);
+          var snapped = App.grid.snap(pt.x, pt.y);
+          var data = App.components.create(dragType, snapped.x, snapped.y);
+          if (data) {
+            App.selection.select(data.id);
+          }
+        }
+      });
+
+      // Search filtering
+      search.addEventListener('input', function() {
+        var q = search.value.toLowerCase().trim();
+        var allItems = container.querySelectorAll('.palette-item');
+        var allCats = container.querySelectorAll('.palette-category');
+
+        if (!q) {
+          for (var k = 0; k < allItems.length; k++) {
+            allItems[k].style.display = '';
+          }
+          for (var m = 0; m < allCats.length; m++) {
+            allCats[m].style.display = '';
+          }
+          return;
+        }
+
+        for (var ci = 0; ci < allCats.length; ci++) {
+          var catItems = allCats[ci].querySelectorAll('.palette-item');
+          var catVisible = false;
+          for (var ii = 0; ii < catItems.length; ii++) {
+            var searchText = catItems[ii].getAttribute('data-search') || '';
+            var matches = searchText.indexOf(q) !== -1;
+            catItems[ii].style.display = matches ? '' : 'none';
+            if (matches) catVisible = true;
+          }
+          allCats[ci].style.display = catVisible ? '' : 'none';
+        }
+      });
+    },
+
+    setPlacing: function(type) {
+      if (this._placingType === type) {
+        this.cancelPlacing();
+        return;
+      }
+      this._placingType = type;
+      var allItems = document.querySelectorAll('.palette-item');
+      for (var i = 0; i < allItems.length; i++) {
+        allItems[i].classList.toggle('placing', allItems[i].getAttribute('data-type') === type);
+      }
+      document.getElementById('canvas-container').classList.remove('default');
+      document.getElementById('canvas-container').style.cursor = 'crosshair';
+    },
+
+    cancelPlacing: function() {
+      this._placingType = null;
+      var allItems = document.querySelectorAll('.palette-item');
+      for (var i = 0; i < allItems.length; i++) {
+        allItems[i].classList.remove('placing');
+      }
+    },
+
+    getPlacingType: function() {
+      return this._placingType;
+    },
+
+    _getIconElement: function(type) {
+      // Build palette icons using safe DOM methods
+      var _el = App.canvas._el.bind(App.canvas);
+      var svg, el;
+
+      switch (type) {
+        case 'rotary_knob':
+          svg = _el('svg', { width: 20, height: 20, viewBox: '0 0 20 20' });
+          svg.appendChild(_el('circle', { cx: 10, cy: 10, r: 8, fill: 'none', stroke: '#4fc3f7', 'stroke-width': 1.5 }));
+          svg.appendChild(_el('line', { x1: 10, y1: 10, x2: 10, y2: 3, stroke: '#4fc3f7', 'stroke-width': 1.5, 'stroke-linecap': 'round' }));
+          return svg;
+        case 'horizontal_slider':
+          svg = _el('svg', { width: 24, height: 14, viewBox: '0 0 24 14' });
+          svg.appendChild(_el('rect', { x: 0, y: 5, width: 24, height: 4, rx: 2, fill: '#555' }));
+          svg.appendChild(_el('circle', { cx: 14, cy: 7, r: 5, fill: '#4fc3f7' }));
+          return svg;
+        case 'momentary_button':
+          svg = _el('svg', { width: 24, height: 16, viewBox: '0 0 24 16' });
+          svg.appendChild(_el('rect', { x: 0, y: 0, width: 24, height: 16, rx: 3, fill: '#333', stroke: '#4fc3f7', 'stroke-width': 1 }));
+          return svg;
+        case 'toggle_switch':
+          svg = _el('svg', { width: 24, height: 14, viewBox: '0 0 24 14' });
+          svg.appendChild(_el('rect', { x: 0, y: 0, width: 24, height: 14, rx: 7, fill: '#333' }));
+          svg.appendChild(_el('circle', { cx: 17, cy: 7, r: 5, fill: '#4fc3f7' }));
+          return svg;
+        case 'vertical_slider':
+          svg = _el('svg', { width: 14, height: 24, viewBox: '0 0 14 24' });
+          svg.appendChild(_el('rect', { x: 5, y: 0, width: 4, height: 24, rx: 2, fill: '#555' }));
+          svg.appendChild(_el('rect', { x: 2, y: 8, width: 10, height: 6, rx: 2, fill: '#4fc3f7' }));
+          return svg;
+        case 'dropdown':
+          svg = _el('svg', { width: 24, height: 14, viewBox: '0 0 24 14' });
+          svg.appendChild(_el('rect', { x: 0, y: 0, width: 24, height: 14, rx: 2, fill: '#222', stroke: '#555', 'stroke-width': 1 }));
+          svg.appendChild(_el('path', { d: 'M 17 5 L 20 9 L 23 5', fill: 'none', stroke: '#888', 'stroke-width': 1 }));
+          return svg;
+        case 'xy_pad':
+          svg = _el('svg', { width: 20, height: 20, viewBox: '0 0 20 20' });
+          svg.appendChild(_el('rect', { x: 0, y: 0, width: 20, height: 20, rx: 1, fill: 'none', stroke: '#555', 'stroke-width': 1 }));
+          svg.appendChild(_el('line', { x1: 10, y1: 0, x2: 10, y2: 20, stroke: '#333', 'stroke-width': 0.5 }));
+          svg.appendChild(_el('line', { x1: 0, y1: 10, x2: 20, y2: 10, stroke: '#333', 'stroke-width': 0.5 }));
+          svg.appendChild(_el('circle', { cx: 13, cy: 7, r: 3, fill: '#4fc3f7' }));
+          return svg;
+        case 'level_meter':
+          svg = _el('svg', { width: 10, height: 22, viewBox: '0 0 10 22' });
+          svg.appendChild(_el('rect', { x: 0, y: 14, width: 10, height: 3, fill: '#66bb6a' }));
+          svg.appendChild(_el('rect', { x: 0, y: 10, width: 10, height: 3, fill: '#66bb6a' }));
+          svg.appendChild(_el('rect', { x: 0, y: 6, width: 10, height: 3, fill: '#ffd54f' }));
+          svg.appendChild(_el('rect', { x: 0, y: 2, width: 10, height: 3, fill: '#ef5350', 'fill-opacity': 0.3 }));
+          return svg;
+        case 'waveform_display':
+          svg = _el('svg', { width: 24, height: 16, viewBox: '0 0 24 16' });
+          svg.appendChild(_el('rect', { x: 0, y: 0, width: 24, height: 16, rx: 2, fill: '#0a0a1a', stroke: '#333', 'stroke-width': 0.5 }));
+          svg.appendChild(_el('path', { d: 'M 2 8 Q 6 2 10 8 Q 14 14 18 8 Q 20 5 22 8', fill: 'none', stroke: '#4fc3f7', 'stroke-width': 1 }));
+          return svg;
+        case 'spectrum_analyzer':
+          svg = _el('svg', { width: 24, height: 16, viewBox: '0 0 24 16' });
+          svg.appendChild(_el('rect', { x: 0, y: 0, width: 24, height: 16, rx: 2, fill: '#0a0a1a', stroke: '#333', 'stroke-width': 0.5 }));
+          svg.appendChild(_el('rect', { x: 3, y: 8, width: 2, height: 6, fill: '#4fc3f7' }));
+          svg.appendChild(_el('rect', { x: 7, y: 4, width: 2, height: 10, fill: '#4fc3f7' }));
+          svg.appendChild(_el('rect', { x: 11, y: 6, width: 2, height: 8, fill: '#4fc3f7' }));
+          svg.appendChild(_el('rect', { x: 15, y: 3, width: 2, height: 11, fill: '#4fc3f7' }));
+          svg.appendChild(_el('rect', { x: 19, y: 9, width: 2, height: 5, fill: '#4fc3f7' }));
+          return svg;
+        case 'step_sequencer':
+          svg = _el('svg', { width: 24, height: 12, viewBox: '0 0 24 12' });
+          svg.appendChild(_el('rect', { x: 0, y: 0, width: 5, height: 12, rx: 1, fill: '#4fc3f7' }));
+          svg.appendChild(_el('rect', { x: 6, y: 0, width: 5, height: 12, rx: 1, fill: '#1a1a2a', stroke: '#333', 'stroke-width': 0.5 }));
+          svg.appendChild(_el('rect', { x: 12, y: 0, width: 5, height: 12, rx: 1, fill: '#4fc3f7' }));
+          svg.appendChild(_el('rect', { x: 18, y: 0, width: 5, height: 12, rx: 1, fill: '#4fc3f7' }));
+          return svg;
+        case 'label_text':
+          svg = _el('svg', { width: 20, height: 14, viewBox: '0 0 20 14' });
+          var t = _el('text', { x: 2, y: 11, fill: '#ccc', 'font-size': 11, 'font-family': 'system-ui, sans-serif', 'font-weight': 'bold' });
+          t.textContent = 'Aa';
+          svg.appendChild(t);
+          return svg;
+        case 'led_indicator':
+          svg = _el('svg', { width: 14, height: 14, viewBox: '0 0 14 14' });
+          svg.appendChild(_el('circle', { cx: 7, cy: 7, r: 5, fill: '#ef5350' }));
+          svg.appendChild(_el('circle', { cx: 5, cy: 5, r: 2, fill: '#fff', 'fill-opacity': 0.3 }));
+          return svg;
+        case 'value_readout':
+          svg = _el('svg', { width: 24, height: 14, viewBox: '0 0 24 14' });
+          svg.appendChild(_el('rect', { x: 0, y: 0, width: 24, height: 14, rx: 2, fill: '#111', stroke: '#333', 'stroke-width': 0.5 }));
+          var rt = _el('text', { x: 12, y: 10, 'text-anchor': 'middle', fill: '#4fc3f7', 'font-size': 8, 'font-family': 'monospace' });
+          rt.textContent = '440';
+          svg.appendChild(rt);
+          return svg;
+        case 'panel_group':
+          svg = _el('svg', { width: 22, height: 18, viewBox: '0 0 22 18' });
+          svg.appendChild(_el('rect', { x: 0, y: 3, width: 22, height: 15, rx: 3, fill: '#1a1a2a', 'fill-opacity': 0.5, stroke: '#555', 'stroke-width': 1 }));
+          var pt = _el('text', { x: 3, y: 6, fill: '#888', 'font-size': 5 });
+          pt.textContent = 'Panel';
+          svg.appendChild(pt);
+          return svg;
+        case 'separator':
+          svg = _el('svg', { width: 24, height: 6, viewBox: '0 0 24 6' });
+          svg.appendChild(_el('line', { x1: 0, y1: 3, x2: 24, y2: 3, stroke: '#555', 'stroke-width': 1 }));
+          return svg;
+        case 'section_header':
+          svg = _el('svg', { width: 22, height: 14, viewBox: '0 0 22 14' });
+          var ht = _el('text', { x: 0, y: 9, fill: '#ccc', 'font-size': 8, 'font-weight': 'bold' });
+          ht.textContent = 'HDR';
+          svg.appendChild(ht);
+          svg.appendChild(_el('line', { x1: 0, y1: 12, x2: 22, y2: 12, stroke: '#555', 'stroke-width': 0.5 }));
+          return svg;
+        case 'image_placeholder':
+          svg = _el('svg', { width: 20, height: 16, viewBox: '0 0 20 16' });
+          svg.appendChild(_el('rect', { x: 0, y: 0, width: 20, height: 16, fill: 'none', stroke: '#555', 'stroke-width': 1, 'stroke-dasharray': '2,2' }));
+          svg.appendChild(_el('line', { x1: 0, y1: 0, x2: 20, y2: 16, stroke: '#555', 'stroke-width': 0.5 }));
+          svg.appendChild(_el('line', { x1: 20, y1: 0, x2: 0, y2: 16, stroke: '#555', 'stroke-width': 0.5 }));
+          return svg;
+        default:
+          svg = _el('svg', { width: 20, height: 20, viewBox: '0 0 20 20' });
+          svg.appendChild(_el('rect', { x: 2, y: 2, width: 16, height: 16, rx: 2, fill: '#333' }));
+          return svg;
+      }
+    }
+  },
+
+  // ============================================================
+  // DRAG & DROP STATE MACHINE
+  // ============================================================
+  drag: {
+    _state: 'idle',
+    _startX: 0,
+    _startY: 0,
+    _startCompX: 0,
+    _startCompY: 0,
+    _movingIds: [],
+    _movingStarts: [],
+    _altHeld: false,
+    _rubberBand: null,
+    _hasMoved: false,
+    _resizeHandle: null,
+    _resizeStartBounds: null,
+    _spaceHeld: false,
+    _panStartX: 0,
+    _panStartY: 0,
+    _panStartVBX: 0,
+    _panStartVBY: 0,
+
+    init: function() {
+      var self = this;
+      var svg = App.canvas.svg;
+      var container = document.getElementById('canvas-container');
+
+      svg.addEventListener('mousedown', function(e) { self._onMouseDown(e); });
+      window.addEventListener('mousemove', function(e) { self._onMouseMove(e); });
+      window.addEventListener('mouseup', function(e) { self._onMouseUp(e); });
+      window.addEventListener('keydown', function(e) {
+        if (e.key === 'Alt') self._altHeld = true;
+        if (e.key === ' ' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          self._spaceHeld = true;
+          container.style.cursor = 'grab';
+        }
+      });
+      window.addEventListener('keyup', function(e) {
+        if (e.key === 'Alt') self._altHeld = false;
+        if (e.key === ' ') {
+          self._spaceHeld = false;
+          if (self._state !== 'panning') {
+            container.style.cursor = '';
+          }
+        }
+      });
+
+      // Zoom with Ctrl+scroll
+      container.addEventListener('wheel', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          var delta = e.deltaY > 0 ? -0.1 : 0.1;
+          App.canvas.zoom(delta, e.clientX, e.clientY);
+        }
+      }, { passive: false });
+
+      // Middle-click pan
+      svg.addEventListener('mousedown', function(e) {
+        if (e.button === 1) {
+          e.preventDefault();
+          self._state = 'panning';
+          self._panStartX = e.clientX;
+          self._panStartY = e.clientY;
+          var vb = App.canvas._getViewBox();
+          self._panStartVBX = vb.x;
+          self._panStartVBY = vb.y;
+          container.style.cursor = 'grabbing';
+        }
+      });
+    },
+
+    _onMouseDown: function(e) {
+      if (e.button !== 0) return;
+
+      // Space+click = pan
+      if (this._spaceHeld) {
+        this._state = 'panning';
+        this._panStartX = e.clientX;
+        this._panStartY = e.clientY;
+        var vb = App.canvas._getViewBox();
+        this._panStartVBX = vb.x;
+        this._panStartVBY = vb.y;
+        document.getElementById('canvas-container').style.cursor = 'grabbing';
+        e.preventDefault();
+        return;
+      }
+      var pt = App.canvas.screenToCanvas(e.clientX, e.clientY);
+
+      // Check if clicked on a resize handle
+      var handleEl = e.target.closest ? e.target.closest('[data-handle]') : null;
+      if (handleEl) {
+        var selFor = handleEl.closest('[data-selection-for]');
+        if (selFor) {
+          var compId = selFor.getAttribute('data-selection-for');
+          var comp = App.components.getById(compId);
+          if (comp) {
+            this._state = 'resizing';
+            this._resizeHandle = handleEl.getAttribute('data-handle');
+            this._resizeStartBounds = { x: comp.x, y: comp.y, w: comp.width, h: comp.height };
+            this._startX = pt.x;
+            this._startY = pt.y;
+            this._movingIds = [compId];
+            this._hasMoved = false;
+            e.preventDefault();
+            return;
+          }
+        }
+      }
+
+      // Check if in placement mode
+      var placingType = App.palette.getPlacingType();
+      if (placingType) {
+        var snapped = App.grid.snap(pt.x, pt.y);
+        var data = App.components.create(placingType, snapped.x, snapped.y);
+        if (data) {
+          App.selection.select(data.id);
+        }
+        App.palette.cancelPlacing();
+        e.preventDefault();
+        return;
+      }
+
+      // Check if clicked on a component
+      var clickedComp = App.components.getAtPoint(pt.x, pt.y);
+      if (clickedComp) {
+        // Ctrl+click or Ctrl+drag: clone-drag (duplicate and immediately start moving copies)
+        if (e.ctrlKey || e.metaKey) {
+          // Make sure clicked component is selected
+          if (!App.selection.isSelected(clickedComp.id)) {
+            App.selection.select(clickedComp.id);
+          }
+          // Duplicate selected components in place (no offset — drag provides the offset)
+          var cloneIds = [];
+          for (var ci = 0; ci < App.state.selectedIds.length; ci++) {
+            var csrc = App.components.getById(App.state.selectedIds[ci]);
+            if (!csrc) continue;
+            var clone = JSON.parse(JSON.stringify(csrc));
+            clone.id = csrc.type + '_' + App.state.nextId++;
+            clone.zIndex = App.state.components.length;
+            App.state.components.push(clone);
+            App.components.renderOne(clone);
+            cloneIds.push(clone.id);
+          }
+          var capturedCloneIds = cloneIds.slice();
+          App.history.push({
+            type: 'clone-drag',
+            undo: function() {
+              for (var ri = 0; ri < capturedCloneIds.length; ri++) {
+                App.components.remove(capturedCloneIds[ri], true);
+              }
+            },
+            redo: function() { /* handled by state */ }
+          });
+          App.state.selectedIds = cloneIds;
+          App.selection.renderHandles();
+          App.state.isDirty = true;
+
+          // Start moving the clones
+          this._state = 'moving';
+          this._startX = pt.x;
+          this._startY = pt.y;
+          this._movingIds = cloneIds.slice();
+          this._movingStarts = [];
+          for (var mi = 0; mi < cloneIds.length; mi++) {
+            var mc = App.components.getById(cloneIds[mi]);
+            if (mc) this._movingStarts.push({ id: mc.id, x: mc.x, y: mc.y });
+          }
+          this._hasMoved = false;
+          e.preventDefault();
+          return;
+        }
+
+        if (e.shiftKey) {
+          if (App.selection.isSelected(clickedComp.id)) {
+            App.state.selectedIds = App.state.selectedIds.filter(function(id) { return id !== clickedComp.id; });
+            App.selection.renderHandles();
+            if (App.state.selectedIds.length === 1) {
+              App.properties.show(App.components.getById(App.state.selectedIds[0]));
+            } else {
+              App.properties.hide();
+            }
+          } else {
+            App.selection.addToSelection(clickedComp.id);
+          }
+        } else if (!App.selection.isSelected(clickedComp.id)) {
+          App.selection.select(clickedComp.id);
+        }
+
+        // Start moving
+        this._state = 'moving';
+        this._startX = pt.x;
+        this._startY = pt.y;
+        this._movingIds = App.state.selectedIds.slice();
+        this._movingStarts = [];
+        for (var i = 0; i < this._movingIds.length; i++) {
+          var c = App.components.getById(this._movingIds[i]);
+          if (c) this._movingStarts.push({ id: c.id, x: c.x, y: c.y });
+        }
+        this._hasMoved = false;
+        e.preventDefault();
+        return;
+      }
+
+      // Clicked empty area
+      App.selection.clear();
+      this._state = 'selecting';
+      this._startX = pt.x;
+      this._startY = pt.y;
+      this._hasMoved = false;
+
+      this._rubberBand = App.canvas._el('rect', {
+        x: pt.x, y: pt.y, width: 0, height: 0,
+        fill: '#4fc3f7', 'fill-opacity': 0.1,
+        stroke: '#4fc3f7', 'stroke-width': 0.5,
+        'stroke-dasharray': '4,3'
+      });
+      App.canvas.selectionLayer.appendChild(this._rubberBand);
+      e.preventDefault();
+    },
+
+    _onMouseMove: function(e) {
+      if (this._state === 'idle') return;
+
+      if (this._state === 'panning') {
+        var pdx = e.clientX - this._panStartX;
+        var pdy = e.clientY - this._panStartY;
+        var vb = App.canvas._getViewBox();
+        var scale = vb.w / App.canvas.svg.clientWidth;
+        App.canvas._setViewBox(
+          this._panStartVBX - pdx * scale,
+          this._panStartVBY - pdy * scale,
+          vb.w, vb.h
+        );
+        return;
+      }
+
+      var pt = App.canvas.screenToCanvas(e.clientX, e.clientY);
+
+      if (this._state === 'moving') {
+        this._hasMoved = true;
+        var dx = pt.x - this._startX;
+        var dy = pt.y - this._startY;
+        for (var i = 0; i < this._movingStarts.length; i++) {
+          var start = this._movingStarts[i];
+          var snapped = App.grid.snap(start.x + dx, start.y + dy);
+          App.components.updatePosition(start.id, snapped.x, snapped.y);
+        }
+        App.selection.renderHandles();
+      } else if (this._state === 'selecting' && this._rubberBand) {
+        this._hasMoved = true;
+        var rx = Math.min(this._startX, pt.x);
+        var ry = Math.min(this._startY, pt.y);
+        var rw = Math.abs(pt.x - this._startX);
+        var rh = Math.abs(pt.y - this._startY);
+        this._rubberBand.setAttribute('x', rx);
+        this._rubberBand.setAttribute('y', ry);
+        this._rubberBand.setAttribute('width', rw);
+        this._rubberBand.setAttribute('height', rh);
+      } else if (this._state === 'resizing') {
+        this._hasMoved = true;
+        var rdx = pt.x - this._startX;
+        var rdy = pt.y - this._startY;
+        var b = this._resizeStartBounds;
+        var h = this._resizeHandle;
+        var newX = b.x, newY = b.y, newW = b.w, newH = b.h;
+
+        if (h.indexOf('r') !== -1) { newW = Math.max(10, b.w + rdx); }
+        if (h.indexOf('l') !== -1) { newW = Math.max(10, b.w - rdx); newX = b.x + b.w - newW; }
+        if (h.indexOf('b') !== -1) { newH = Math.max(10, b.h + rdy); }
+        if (h.indexOf('t') !== -1) { newH = Math.max(10, b.h - rdy); newY = b.y + b.h - newH; }
+
+        var snappedPos = App.grid.snap(newX, newY);
+        newX = snappedPos.x;
+        newY = snappedPos.y;
+
+        var resComp = App.components.getById(this._movingIds[0]);
+        if (resComp) {
+          resComp.x = newX;
+          resComp.y = newY;
+          resComp.width = Math.round(newW);
+          resComp.height = Math.round(newH);
+          App.components.renderOne(resComp);
+          App.selection.renderHandles();
+        }
+      }
+    },
+
+    _onMouseUp: function(e) {
+      if (this._state === 'panning') {
+        this._state = 'idle';
+        document.getElementById('canvas-container').style.cursor = this._spaceHeld ? 'grab' : '';
+        return;
+      }
+      if (this._state === 'moving' && this._hasMoved) {
+        var moves = [];
+        for (var i = 0; i < this._movingStarts.length; i++) {
+          var start = this._movingStarts[i];
+          var comp = App.components.getById(start.id);
+          moves.push({
+            id: start.id,
+            oldX: start.x, oldY: start.y,
+            newX: comp.x, newY: comp.y
+          });
+        }
+        App.history.push({
+          type: 'move',
+          undo: function() {
+            for (var j = 0; j < moves.length; j++) {
+              App.components.updatePosition(moves[j].id, moves[j].oldX, moves[j].oldY);
+            }
+            App.selection.renderHandles();
+          },
+          redo: function() {
+            for (var j = 0; j < moves.length; j++) {
+              App.components.updatePosition(moves[j].id, moves[j].newX, moves[j].newY);
+            }
+            App.selection.renderHandles();
+          }
+        });
+        App.state.isDirty = true;
+      } else if (this._state === 'selecting' && this._rubberBand) {
+        if (this._hasMoved) {
+          var rbx = parseFloat(this._rubberBand.getAttribute('x'));
+          var rby = parseFloat(this._rubberBand.getAttribute('y'));
+          var rbw = parseFloat(this._rubberBand.getAttribute('width'));
+          var rbh = parseFloat(this._rubberBand.getAttribute('height'));
+
+          var selected = [];
+          for (var k = 0; k < App.state.components.length; k++) {
+            var c = App.state.components[k];
+            if (c.x + c.width > rbx && c.x < rbx + rbw &&
+                c.y + c.height > rby && c.y < rby + rbh) {
+              selected.push(c.id);
+            }
+          }
+          App.state.selectedIds = selected;
+          if (selected.length === 1) {
+            App.properties.show(App.components.getById(selected[0]));
+          }
+          App.selection.renderHandles();
+        }
+        this._rubberBand.remove();
+        this._rubberBand = null;
+      } else if (this._state === 'resizing' && this._hasMoved) {
+        var resCompId = this._movingIds[0];
+        var resComp = App.components.getById(resCompId);
+        var rb = this._resizeStartBounds;
+        if (resComp) {
+          var savedBounds = { x: resComp.x, y: resComp.y, w: resComp.width, h: resComp.height };
+          var origBounds = { x: rb.x, y: rb.y, w: rb.w, h: rb.h };
+          App.history.push({
+            type: 'resize',
+            undo: function() {
+              resComp.x = origBounds.x; resComp.y = origBounds.y;
+              resComp.width = origBounds.w; resComp.height = origBounds.h;
+              App.components.renderOne(resComp);
+              App.selection.renderHandles();
+            },
+            redo: function() {
+              resComp.x = savedBounds.x; resComp.y = savedBounds.y;
+              resComp.width = savedBounds.w; resComp.height = savedBounds.h;
+              App.components.renderOne(resComp);
+              App.selection.renderHandles();
+            }
+          });
+          App.properties.refresh();
+        }
+      }
+
+      this._state = 'idle';
+      this._movingIds = [];
+      this._movingStarts = [];
+      this._resizeHandle = null;
+      this._resizeStartBounds = null;
+    }
+  },
+
+  // ============================================================
+  // HISTORY (Undo/Redo)
+  // ============================================================
+  history: {
+    _undoStack: [],
+    _redoStack: [],
+    push: function(action) {
+      this._undoStack.push(action);
+      this._redoStack = [];
+    },
+
+    undo: function() {
+      var action = this._undoStack.pop();
+      if (!action) return;
+      action.undo();
+      this._redoStack.push(action);
+    },
+
+    redo: function() {
+      var action = this._redoStack.pop();
+      if (!action) return;
+      action.redo();
+      this._undoStack.push(action);
+    }
+  },
+
+  // ============================================================
+  // EFFECTS — SVG filters & overlays
+  // ============================================================
+  effects: {
+    // Build or update the <filter> element for a component
+    buildFilter: function(compId, effects) {
+      var _el = App.canvas._el.bind(App.canvas);
+      var filterId = 'fx-' + compId;
+
+      // Remove existing filter
+      var existing = App.canvas.defs.querySelector('#' + filterId);
+      if (existing) existing.remove();
+
+      // Check if any filter-based effect is enabled
+      var needsFilter = (effects.drop_shadow && effects.drop_shadow.enabled) ||
+                        (effects.inner_shadow && effects.inner_shadow.enabled) ||
+                        (effects.blur_glow && effects.blur_glow.enabled) ||
+                        (effects.bevel && effects.bevel.enabled);
+
+      if (!needsFilter) return null;
+
+      var filter = _el('filter', {
+        id: filterId,
+        x: '-30%', y: '-30%', width: '160%', height: '160%',
+        'color-interpolation-filters': 'sRGB'
+      });
+
+      var lastResult = 'SourceGraphic';
+
+      // Drop Shadow
+      if (effects.drop_shadow && effects.drop_shadow.enabled) {
+        var dsI = (effects.drop_shadow.intensity || 50) / 100;
+        var dsBlur = 2 + dsI * 6;
+        var dsOff = 1 + dsI * 4;
+        filter.appendChild(_el('feDropShadow', {
+          dx: dsOff, dy: dsOff,
+          stdDeviation: dsBlur,
+          'flood-color': '#000',
+          'flood-opacity': 0.3 + dsI * 0.4,
+          in: lastResult,
+          result: 'dropShadow'
+        }));
+        lastResult = 'dropShadow';
+      }
+
+      // Inner Shadow
+      if (effects.inner_shadow && effects.inner_shadow.enabled) {
+        var isI = (effects.inner_shadow.intensity || 50) / 100;
+        var isBlur = 1 + isI * 4;
+
+        // Invert alpha of source to get inner area
+        filter.appendChild(_el('feComponentTransfer', { in: 'SourceAlpha', result: 'isInvert' }));
+        var invertNode = filter.lastChild;
+        var funcA = _el('feFuncA', { type: 'table', tableValues: '1 0' });
+        invertNode.appendChild(funcA);
+
+        filter.appendChild(_el('feGaussianBlur', {
+          in: 'isInvert', stdDeviation: isBlur, result: 'isBlur'
+        }));
+        filter.appendChild(_el('feOffset', {
+          in: 'isBlur', dx: isI * 2, dy: isI * 2, result: 'isOffset'
+        }));
+        filter.appendChild(_el('feFlood', {
+          'flood-color': '#000', 'flood-opacity': 0.4 + isI * 0.4, result: 'isFlood'
+        }));
+        filter.appendChild(_el('feComposite', {
+          in: 'isFlood', in2: 'isOffset', operator: 'in', result: 'isComp'
+        }));
+        filter.appendChild(_el('feComposite', {
+          in: 'isComp', in2: lastResult, operator: 'over', result: 'innerShadow'
+        }));
+        lastResult = 'innerShadow';
+      }
+
+      // Blur/Glow
+      if (effects.blur_glow && effects.blur_glow.enabled) {
+        var bgI = (effects.blur_glow.intensity || 30) / 100;
+        var bgBlur = 1 + bgI * 6;
+        filter.appendChild(_el('feGaussianBlur', {
+          in: 'SourceGraphic', stdDeviation: bgBlur, result: 'bgBlur'
+        }));
+        filter.appendChild(_el('feMerge', { result: 'blurGlow' }));
+        var merge = filter.lastChild;
+        merge.appendChild(_el('feMergeNode', { in: 'bgBlur' }));
+        merge.appendChild(_el('feMergeNode', { in: lastResult }));
+        lastResult = 'blurGlow';
+      }
+
+      // Bevel
+      if (effects.bevel && effects.bevel.enabled) {
+        var bvI = (effects.bevel.intensity || 50) / 100;
+        var bvOff = 0.5 + bvI * 1.5;
+        var bvBlur = 0.5 + bvI * 1;
+
+        // Light (top-left highlight)
+        filter.appendChild(_el('feOffset', {
+          in: 'SourceAlpha', dx: -bvOff, dy: -bvOff, result: 'bvLightOff'
+        }));
+        filter.appendChild(_el('feGaussianBlur', {
+          in: 'bvLightOff', stdDeviation: bvBlur, result: 'bvLightBlur'
+        }));
+        filter.appendChild(_el('feFlood', {
+          'flood-color': '#fff', 'flood-opacity': 0.15 + bvI * 0.2, result: 'bvLightFlood'
+        }));
+        filter.appendChild(_el('feComposite', {
+          in: 'bvLightFlood', in2: 'bvLightBlur', operator: 'in', result: 'bvLight'
+        }));
+
+        // Dark (bottom-right shadow)
+        filter.appendChild(_el('feOffset', {
+          in: 'SourceAlpha', dx: bvOff, dy: bvOff, result: 'bvDarkOff'
+        }));
+        filter.appendChild(_el('feGaussianBlur', {
+          in: 'bvDarkOff', stdDeviation: bvBlur, result: 'bvDarkBlur'
+        }));
+        filter.appendChild(_el('feFlood', {
+          'flood-color': '#000', 'flood-opacity': 0.2 + bvI * 0.3, result: 'bvDarkFlood'
+        }));
+        filter.appendChild(_el('feComposite', {
+          in: 'bvDarkFlood', in2: 'bvDarkBlur', operator: 'in', result: 'bvDark'
+        }));
+
+        // Merge bevel with current result
+        filter.appendChild(_el('feMerge', { result: 'bevel' }));
+        var bvMerge = filter.lastChild;
+        bvMerge.appendChild(_el('feMergeNode', { in: 'bvDark' }));
+        bvMerge.appendChild(_el('feMergeNode', { in: lastResult }));
+        bvMerge.appendChild(_el('feMergeNode', { in: 'bvLight' }));
+        lastResult = 'bevel';
+      }
+
+      App.canvas.defs.appendChild(filter);
+      return filterId;
+    },
+
+    // Build overlay elements (gloss, gradient, texture) — appended to component <g>
+    buildOverlays: function(g, data) {
+      var _el = App.canvas._el.bind(App.canvas);
+      var fx = data.effects;
+      var w = data.width;
+      var h = data.height;
+
+      // Gradient Fill overlay
+      if (fx.gradient_fill && fx.gradient_fill.enabled) {
+        var gradId = 'grad-' + data.id;
+        // Remove old
+        var oldGrad = App.canvas.defs.querySelector('#' + gradId);
+        if (oldGrad) oldGrad.remove();
+
+        var angle = (fx.gradient_fill.angle || 0) * Math.PI / 180;
+        var x1 = 50 - Math.cos(angle) * 50;
+        var y1 = 50 - Math.sin(angle) * 50;
+        var x2 = 50 + Math.cos(angle) * 50;
+        var y2 = 50 + Math.sin(angle) * 50;
+
+        var grad = _el('linearGradient', {
+          id: gradId,
+          x1: x1 + '%', y1: y1 + '%', x2: x2 + '%', y2: y2 + '%'
+        });
+        var stop1 = _el('stop', { offset: '0%', 'stop-color': fx.gradient_fill.startColor || '#ffffff' });
+        var stop2 = _el('stop', { offset: '100%', 'stop-color': fx.gradient_fill.endColor || '#000000' });
+        grad.appendChild(stop1);
+        grad.appendChild(stop2);
+        App.canvas.defs.appendChild(grad);
+
+        var opacity = (fx.gradient_fill.intensity || 50) / 200;
+        g.appendChild(_el('rect', {
+          x: 0, y: 0, width: w, height: h,
+          fill: 'url(#' + gradId + ')',
+          'fill-opacity': opacity,
+          rx: 2, 'pointer-events': 'none',
+          'data-overlay': 'gradient'
+        }));
+      }
+
+      // Texture Fill overlay
+      if (fx.texture_fill && fx.texture_fill.enabled) {
+        var texId = 'tex-' + data.id;
+        var oldTex = App.canvas.defs.querySelector('#' + texId);
+        if (oldTex) oldTex.remove();
+
+        var preset = fx.texture_fill.preset || 'noise';
+        var texPattern = _el('pattern', {
+          id: texId,
+          width: 4, height: 4,
+          patternUnits: 'userSpaceOnUse'
+        });
+
+        if (preset === 'noise') {
+          // feTurbulence-based noise via a tiny filter
+          var noiseFilterId = 'texnoise-' + data.id;
+          var oldNf = App.canvas.defs.querySelector('#' + noiseFilterId);
+          if (oldNf) oldNf.remove();
+
+          var nf = _el('filter', { id: noiseFilterId, x: '0', y: '0', width: '100%', height: '100%' });
+          nf.appendChild(_el('feTurbulence', {
+            type: 'fractalNoise', baseFrequency: '0.65', numOctaves: 3, stitchTiles: 'stitch', result: 'noise'
+          }));
+          nf.appendChild(_el('feColorMatrix', {
+            type: 'saturate', values: '0', in: 'noise'
+          }));
+          App.canvas.defs.appendChild(nf);
+
+          var opacity = (fx.texture_fill.intensity || 50) / 200;
+          g.appendChild(_el('rect', {
+            x: 0, y: 0, width: w, height: h,
+            fill: '#808080', 'fill-opacity': opacity,
+            filter: 'url(#' + noiseFilterId + ')',
+            rx: 2, 'pointer-events': 'none',
+            'data-overlay': 'texture'
+          }));
+        } else if (preset === 'carbon') {
+          texPattern.setAttribute('width', 6);
+          texPattern.setAttribute('height', 6);
+          texPattern.appendChild(_el('rect', { x: 0, y: 0, width: 6, height: 6, fill: '#1a1a1a' }));
+          texPattern.appendChild(_el('rect', { x: 0, y: 0, width: 3, height: 3, fill: '#222' }));
+          texPattern.appendChild(_el('rect', { x: 3, y: 3, width: 3, height: 3, fill: '#222' }));
+          App.canvas.defs.appendChild(texPattern);
+
+          var opacity = (fx.texture_fill.intensity || 50) / 150;
+          g.appendChild(_el('rect', {
+            x: 0, y: 0, width: w, height: h,
+            fill: 'url(#' + texId + ')',
+            'fill-opacity': opacity,
+            rx: 2, 'pointer-events': 'none',
+            'data-overlay': 'texture'
+          }));
+        } else if (preset === 'brushed_metal') {
+          texPattern.setAttribute('width', 200);
+          texPattern.setAttribute('height', 2);
+          texPattern.appendChild(_el('rect', { x: 0, y: 0, width: 200, height: 1, fill: '#888', 'fill-opacity': 0.1 }));
+          texPattern.appendChild(_el('rect', { x: 0, y: 1, width: 200, height: 1, fill: '#444', 'fill-opacity': 0.1 }));
+          App.canvas.defs.appendChild(texPattern);
+
+          var opacity = (fx.texture_fill.intensity || 50) / 100;
+          g.appendChild(_el('rect', {
+            x: 0, y: 0, width: w, height: h,
+            fill: 'url(#' + texId + ')',
+            'fill-opacity': opacity,
+            rx: 2, 'pointer-events': 'none',
+            'data-overlay': 'texture'
+          }));
+        } else if (preset === 'wood_grain') {
+          var woodFilterId = 'texwood-' + data.id;
+          var oldWf = App.canvas.defs.querySelector('#' + woodFilterId);
+          if (oldWf) oldWf.remove();
+
+          var wf = _el('filter', { id: woodFilterId, x: '0', y: '0', width: '100%', height: '100%' });
+          wf.appendChild(_el('feTurbulence', {
+            type: 'fractalNoise', baseFrequency: '0.02 0.15', numOctaves: 2, seed: 3, result: 'wood'
+          }));
+          wf.appendChild(_el('feColorMatrix', {
+            type: 'matrix',
+            values: '0 0 0 0 0.4  0 0 0 0 0.25  0 0 0 0 0.1  0 0 0 1 0',
+            in: 'wood'
+          }));
+          App.canvas.defs.appendChild(wf);
+
+          var opacity = (fx.texture_fill.intensity || 50) / 150;
+          g.appendChild(_el('rect', {
+            x: 0, y: 0, width: w, height: h,
+            fill: '#806040', 'fill-opacity': opacity,
+            filter: 'url(#' + woodFilterId + ')',
+            rx: 2, 'pointer-events': 'none',
+            'data-overlay': 'texture'
+          }));
+        } else if (preset === 'diamond_plate') {
+          texPattern.setAttribute('width', 12);
+          texPattern.setAttribute('height', 12);
+          texPattern.appendChild(_el('rect', { x: 0, y: 0, width: 12, height: 12, fill: '#2a2a2a' }));
+          texPattern.appendChild(_el('path', {
+            d: 'M 6 1 L 11 6 L 6 11 L 1 6 Z',
+            fill: '#3a3a3a', stroke: '#444', 'stroke-width': 0.3
+          }));
+          App.canvas.defs.appendChild(texPattern);
+
+          var opacity = (fx.texture_fill.intensity || 50) / 150;
+          g.appendChild(_el('rect', {
+            x: 0, y: 0, width: w, height: h,
+            fill: 'url(#' + texId + ')',
+            'fill-opacity': opacity,
+            rx: 2, 'pointer-events': 'none',
+            'data-overlay': 'texture'
+          }));
+        }
+      }
+
+      // Gloss overlay (always rendered last so it sits on top)
+      if (fx.gloss && fx.gloss.enabled) {
+        var glossI = (fx.gloss.intensity || 50) / 100;
+        var glossH = h * 0.45;
+        g.appendChild(_el('ellipse', {
+          cx: w / 2, cy: glossH * 0.4,
+          rx: w * 0.4, ry: glossH * 0.6,
+          fill: '#fff', 'fill-opacity': 0.05 + glossI * 0.12,
+          'pointer-events': 'none',
+          'data-overlay': 'gloss'
+        }));
+      }
+    },
+
+    // Clean up defs for a component
+    cleanup: function(compId) {
+      var ids = ['fx-', 'grad-', 'tex-', 'texnoise-', 'texwood-'];
+      for (var i = 0; i < ids.length; i++) {
+        var el = App.canvas.defs.querySelector('#' + ids[i] + compId);
+        if (el) el.remove();
+      }
+    },
+
+    EFFECT_NAMES: {
+      drop_shadow: 'Drop Shadow',
+      inner_shadow: 'Inner Shadow',
+      blur_glow: 'Blur / Glow',
+      bevel: 'Bevel',
+      gloss: 'Gloss',
+      gradient_fill: 'Gradient',
+      texture_fill: 'Texture'
+    },
+
+    TEXTURE_PRESETS: ['noise', 'carbon', 'brushed_metal', 'wood_grain', 'diamond_plate']
+  },
+
+  // ============================================================
+  // Z-ORDER
+  // ============================================================
+  zorder: {
+    _reindex: function() {
+      var sorted = App.state.components.slice().sort(function(a, b) { return a.zIndex - b.zIndex; });
+      for (var i = 0; i < sorted.length; i++) {
+        sorted[i].zIndex = i;
+      }
+    },
+
+    bringForward: function(ids) {
+      this._reindex();
+      var comps = App.state.components;
+      for (var i = 0; i < ids.length; i++) {
+        var c = App.components.getById(ids[i]);
+        if (!c) continue;
+        var above = null;
+        var minAbove = Infinity;
+        for (var j = 0; j < comps.length; j++) {
+          if (ids.indexOf(comps[j].id) === -1 && comps[j].zIndex > c.zIndex && comps[j].zIndex < minAbove) {
+            minAbove = comps[j].zIndex;
+            above = comps[j];
+          }
+        }
+        if (above) {
+          var tmp = c.zIndex;
+          c.zIndex = above.zIndex;
+          above.zIndex = tmp;
+        }
+      }
+      App.components.renderAll();
+      App.selection.renderHandles();
+    },
+
+    sendBackward: function(ids) {
+      this._reindex();
+      var comps = App.state.components;
+      for (var i = 0; i < ids.length; i++) {
+        var c = App.components.getById(ids[i]);
+        if (!c) continue;
+        var below = null;
+        var maxBelow = -1;
+        for (var j = 0; j < comps.length; j++) {
+          if (ids.indexOf(comps[j].id) === -1 && comps[j].zIndex < c.zIndex && comps[j].zIndex > maxBelow) {
+            maxBelow = comps[j].zIndex;
+            below = comps[j];
+          }
+        }
+        if (below) {
+          var tmp = c.zIndex;
+          c.zIndex = below.zIndex;
+          below.zIndex = tmp;
+        }
+      }
+      App.components.renderAll();
+      App.selection.renderHandles();
+    },
+
+    bringToFront: function(ids) {
+      this._reindex();
+      var maxZ = App.state.components.length;
+      for (var i = 0; i < ids.length; i++) {
+        var c = App.components.getById(ids[i]);
+        if (c) c.zIndex = maxZ++;
+      }
+      this._reindex();
+      App.components.renderAll();
+      App.selection.renderHandles();
+    },
+
+    sendToBack: function(ids) {
+      this._reindex();
+      for (var i = ids.length - 1; i >= 0; i--) {
+        var c = App.components.getById(ids[i]);
+        if (c) c.zIndex = -1 - i;
+      }
+      this._reindex();
+      App.components.renderAll();
+      App.selection.renderHandles();
+    }
+  },
+
+  // ============================================================
+  // GROUPS
+  // ============================================================
+  groups: {
+    create: function(ids) {
+      if (ids.length < 2) return;
+      var groupId = 'group_' + App.state.nextId++;
+      var group = { id: groupId, label: 'Group', children: ids.slice() };
+      App.state.groups.push(group);
+      for (var i = 0; i < ids.length; i++) {
+        var c = App.components.getById(ids[i]);
+        if (c) c.group = groupId;
+      }
+      App.history.push({
+        type: 'group',
+        undo: function() { App.groups.ungroup(groupId, true); },
+        redo: function() { App.groups.create(ids); }
+      });
+      App.selection.renderHandles();
+      App.state.isDirty = true;
+    },
+
+    ungroup: function(groupId, skipHistory) {
+      var idx = -1;
+      for (var i = 0; i < App.state.groups.length; i++) {
+        if (App.state.groups[i].id === groupId) { idx = i; break; }
+      }
+      if (idx === -1) return;
+      var group = App.state.groups[idx];
+      var childIds = group.children.slice();
+      for (var j = 0; j < childIds.length; j++) {
+        var c = App.components.getById(childIds[j]);
+        if (c) c.group = null;
+      }
+      App.state.groups.splice(idx, 1);
+      if (!skipHistory) {
+        App.history.push({
+          type: 'ungroup',
+          undo: function() { App.groups.create(childIds); },
+          redo: function() { App.groups.ungroup(groupId, true); }
+        });
+      }
+      App.selection.renderHandles();
+      App.state.isDirty = true;
+    },
+
+    getGroupOf: function(compId) {
+      var c = App.components.getById(compId);
+      if (!c || !c.group) return null;
+      for (var i = 0; i < App.state.groups.length; i++) {
+        if (App.state.groups[i].id === c.group) return App.state.groups[i];
+      }
+      return null;
+    },
+
+    getGroupChildren: function(groupId) {
+      for (var i = 0; i < App.state.groups.length; i++) {
+        if (App.state.groups[i].id === groupId) return App.state.groups[i].children;
+      }
+      return [];
+    },
+
+    // Expand selection to include all group members
+    expandSelection: function(ids) {
+      var expanded = ids.slice();
+      for (var i = 0; i < ids.length; i++) {
+        var group = this.getGroupOf(ids[i]);
+        if (group) {
+          for (var j = 0; j < group.children.length; j++) {
+            if (expanded.indexOf(group.children[j]) === -1) {
+              expanded.push(group.children[j]);
+            }
+          }
+        }
+      }
+      return expanded;
+    },
+
+    ungroupSelected: function() {
+      var seen = {};
+      for (var i = 0; i < App.state.selectedIds.length; i++) {
+        var group = this.getGroupOf(App.state.selectedIds[i]);
+        if (group && !seen[group.id]) {
+          seen[group.id] = true;
+          this.ungroup(group.id);
+        }
+      }
+    }
+  },
+
+  // ============================================================
+  // CONTEXT MENU
+  // ============================================================
+  contextMenu: {
+    _el: null,
+
+    show: function(x, y, items) {
+      this.hide();
+      var menu = document.createElement('div');
+      menu.className = 'context-menu';
+      menu.style.left = x + 'px';
+      menu.style.top = y + 'px';
+
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        if (item.separator) {
+          var sep = document.createElement('div');
+          sep.className = 'context-menu-separator';
+          menu.appendChild(sep);
+          continue;
+        }
+        (function(action, disabled) {
+          var row = document.createElement('div');
+          row.className = 'context-menu-item' + (disabled ? ' disabled' : '');
+
+          var label = document.createElement('span');
+          label.textContent = item.label;
+          row.appendChild(label);
+
+          if (item.shortcut) {
+            var sc = document.createElement('span');
+            sc.className = 'context-menu-shortcut';
+            sc.textContent = item.shortcut;
+            row.appendChild(sc);
+          }
+
+          if (!disabled) {
+            row.addEventListener('click', function() {
+              App.contextMenu.hide();
+              action();
+            });
+          }
+          menu.appendChild(row);
+        })(item.action, item.disabled);
+      }
+
+      document.body.appendChild(menu);
+      this._el = menu;
+
+      // Adjust if off-screen
+      var rect = menu.getBoundingClientRect();
+      if (rect.right > window.innerWidth) {
+        menu.style.left = (x - rect.width) + 'px';
+      }
+      if (rect.bottom > window.innerHeight) {
+        menu.style.top = (y - rect.height) + 'px';
+      }
+
+      // Dismiss on click outside or Escape
+      var self = this;
+      setTimeout(function() {
+        var dismiss = function(e) {
+          if (!menu.contains(e.target)) {
+            self.hide();
+            document.removeEventListener('mousedown', dismiss);
+            document.removeEventListener('keydown', escDismiss);
+          }
+        };
+        var escDismiss = function(e) {
+          if (e.key === 'Escape') {
+            self.hide();
+            document.removeEventListener('mousedown', dismiss);
+            document.removeEventListener('keydown', escDismiss);
+          }
+        };
+        document.addEventListener('mousedown', dismiss);
+        document.addEventListener('keydown', escDismiss);
+      }, 0);
+    },
+
+    hide: function() {
+      if (this._el) {
+        this._el.remove();
+        this._el = null;
+      }
+    },
+
+    buildForSelection: function() {
+      var hasSelection = App.state.selectedIds.length > 0;
+      var multiSelected = App.state.selectedIds.length > 1;
+      var hasGroup = false;
+      for (var i = 0; i < App.state.selectedIds.length; i++) {
+        if (App.groups.getGroupOf(App.state.selectedIds[i])) { hasGroup = true; break; }
+      }
+      var hasClipboard = App.state.clipboard.length > 0;
+
+      return [
+        { label: 'Copy', shortcut: 'Ctrl+C', action: function() { App.shortcuts._doCopy(); }, disabled: !hasSelection },
+        { label: 'Cut', shortcut: 'Ctrl+X', action: function() { App.shortcuts._doCut(); }, disabled: !hasSelection },
+        { label: 'Paste', shortcut: 'Ctrl+V', action: function() { App.shortcuts._doPaste(); }, disabled: !hasClipboard },
+        { label: 'Duplicate', shortcut: 'Ctrl+D', action: function() { App.shortcuts._doDuplicate(); }, disabled: !hasSelection },
+        { separator: true },
+        { label: 'Group', shortcut: 'Ctrl+G', action: function() { App.groups.create(App.state.selectedIds.slice()); }, disabled: !multiSelected },
+        { label: 'Ungroup', shortcut: 'Ctrl+Shift+G', action: function() { App.groups.ungroupSelected(); }, disabled: !hasGroup },
+        { separator: true },
+        { label: 'Bring Forward', shortcut: 'Ctrl+]', action: function() { App.zorder.bringForward(App.state.selectedIds); } },
+        { label: 'Send Backward', shortcut: 'Ctrl+[', action: function() { App.zorder.sendBackward(App.state.selectedIds); } },
+        { label: 'Bring to Front', shortcut: 'Ctrl+Shift+]', action: function() { App.zorder.bringToFront(App.state.selectedIds); } },
+        { label: 'Send to Back', shortcut: 'Ctrl+Shift+[', action: function() { App.zorder.sendToBack(App.state.selectedIds); } },
+        { separator: true },
+        { label: 'Select All', shortcut: 'Ctrl+A', action: function() { App.selection.selectAll(); } },
+        { label: 'Delete', shortcut: 'Del', action: function() { App.selection.deleteSelected(); }, disabled: !hasSelection },
+      ];
+    },
+
+    buildForCanvas: function() {
+      var hasClipboard = App.state.clipboard.length > 0;
+      return [
+        { label: 'Paste', shortcut: 'Ctrl+V', action: function() { App.shortcuts._doPaste(); }, disabled: !hasClipboard },
+        { label: 'Select All', shortcut: 'Ctrl+A', action: function() { App.selection.selectAll(); } },
+      ];
+    }
+  },
+
+  // ============================================================
+  // LAYERS PANEL
+  // ============================================================
+  layers: {
+    init: function() {
+      this.render();
+    },
+
+    render: function() {
+      var panel = document.getElementById('layers-panel');
+      while (panel.firstChild) panel.removeChild(panel.firstChild);
+
+      // Heading
+      var heading = document.createElement('div');
+      heading.className = 'layers-heading';
+      heading.textContent = 'Layers';
+      panel.appendChild(heading);
+
+      // Sort by zIndex descending (top-most first)
+      var sorted = App.state.components.slice().sort(function(a, b) { return b.zIndex - a.zIndex; });
+
+      for (var i = 0; i < sorted.length; i++) {
+        (function(comp) {
+          var factory = App.components.registry[comp.type];
+          var item = document.createElement('div');
+          item.className = 'layer-item';
+          if (App.selection.isSelected(comp.id)) item.classList.add('selected');
+          if (comp.visible === false) item.classList.add('hidden-layer');
+
+          // Eye toggle
+          var eye = document.createElement('span');
+          eye.className = 'layer-eye';
+          eye.textContent = comp.visible !== false ? '\u25C9' : '\u25CE'; // ◉ / ◎
+          eye.title = comp.visible !== false ? 'Hide' : 'Show';
+          eye.addEventListener('click', function(e) {
+            e.stopPropagation();
+            comp.visible = comp.visible === false ? true : false;
+            App.components.renderOne(comp);
+            App.selection.renderHandles();
+            App.layers.render();
+          });
+          item.appendChild(eye);
+
+          // Name
+          var name = document.createElement('span');
+          name.className = 'layer-name';
+          name.textContent = comp.label || comp.id;
+          item.appendChild(name);
+
+          // Type badge
+          var type = document.createElement('span');
+          type.className = 'layer-type';
+          type.textContent = factory ? factory.displayName : '';
+          item.appendChild(type);
+
+          // Up/down arrows
+          var arrows = document.createElement('span');
+          arrows.className = 'layer-arrows';
+
+          var up = document.createElement('span');
+          up.className = 'layer-arrow';
+          up.textContent = '\u25B4'; // ▴
+          up.title = 'Move up';
+          up.addEventListener('click', function(e) {
+            e.stopPropagation();
+            App.zorder.bringForward([comp.id]);
+            App.layers.render();
+          });
+          arrows.appendChild(up);
+
+          var down = document.createElement('span');
+          down.className = 'layer-arrow';
+          down.textContent = '\u25BE'; // ▾
+          down.title = 'Move down';
+          down.addEventListener('click', function(e) {
+            e.stopPropagation();
+            App.zorder.sendBackward([comp.id]);
+            App.layers.render();
+          });
+          arrows.appendChild(down);
+
+          item.appendChild(arrows);
+
+          // Click to select
+          item.addEventListener('click', function() {
+            App.selection.select(comp.id);
+            App.layers.render();
+          });
+
+          panel.appendChild(item);
+        })(sorted[i]);
+      }
+    }
+  },
+
+  // ============================================================
+  // I/O — Save, Load, Export
+  // ============================================================
+  io: {
+    _autoSaveTimer: null,
+
+    init: function() {
+      // Build File menu
+      this._buildFileMenu();
+      this._buildExportMenu();
+
+      // Wire dropdown toggles
+      this._wireDropdown('btn-file', 'file-menu');
+      this._wireDropdown('btn-export', 'export-menu');
+
+      // File input for load
+      var self = this;
+      document.getElementById('file-input').addEventListener('change', function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+          try {
+            var json = JSON.parse(ev.target.result);
+            self.fromJSON(json);
+            App.state.fileName = file.name;
+            document.title = 'Drawdio — ' + file.name;
+          } catch (err) {
+            alert('Failed to load file: ' + err.message);
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      });
+
+      // Auto-save every 30s
+      this._autoSaveTimer = setInterval(function() {
+        self.autoSave();
+      }, 30000);
+
+      // Check for auto-save on init
+      this.checkAutoSave();
+    },
+
+    _wireDropdown: function(btnId, menuId) {
+      var btn = document.getElementById(btnId);
+      var menu = document.getElementById(menuId);
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        // Close other menus
+        var allMenus = document.querySelectorAll('.toolbar-dropdown-menu');
+        for (var i = 0; i < allMenus.length; i++) {
+          if (allMenus[i] !== menu) allMenus[i].classList.remove('open');
+        }
+        menu.classList.toggle('open');
+      });
+      document.addEventListener('click', function() {
+        menu.classList.remove('open');
+      });
+      menu.addEventListener('click', function(e) {
+        e.stopPropagation();
+      });
+    },
+
+    _buildFileMenu: function() {
+      var menu = document.getElementById('file-menu');
+      var self = this;
+      var items = [
+        { label: 'New', shortcut: '', action: function() { self.newProject(); } },
+        { label: 'Open...', shortcut: 'Ctrl+O', action: function() { document.getElementById('file-input').click(); } },
+        { sep: true },
+        { label: 'Save', shortcut: 'Ctrl+S', action: function() { self.save(); } },
+        { label: 'Save As...', shortcut: '', action: function() { self.saveAs(); } },
+      ];
+      this._populateMenu(menu, items);
+    },
+
+    _buildExportMenu: function() {
+      var menu = document.getElementById('export-menu');
+      var self = this;
+      var items = [
+        { label: 'PNG 1x', shortcut: 'Ctrl+E', action: function() { self.exportPNG(1); } },
+        { label: 'PNG 2x', shortcut: '', action: function() { self.exportPNG(2); } },
+        { label: 'PNG 3x', shortcut: '', action: function() { self.exportPNG(3); } },
+        { label: 'PNG Transparent', shortcut: '', action: function() { self.exportPNG(1, true); } },
+        { sep: true },
+        { label: 'SVG', shortcut: 'Ctrl+Shift+E', action: function() { self.exportSVG(); } },
+        { sep: true },
+        { label: 'JSON File', shortcut: '', action: function() { self.save(); } },
+        { label: 'JSON to Clipboard', shortcut: 'Ctrl+Shift+C', action: function() { self.copyJSONToClipboard(); } },
+      ];
+      this._populateMenu(menu, items);
+    },
+
+    _populateMenu: function(menu, items) {
+      while (menu.firstChild) menu.removeChild(menu.firstChild);
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].sep) {
+          var sep = document.createElement('div');
+          sep.className = 'toolbar-dropdown-sep';
+          menu.appendChild(sep);
+          continue;
+        }
+        (function(item) {
+          var row = document.createElement('div');
+          row.className = 'toolbar-dropdown-item';
+          var lbl = document.createElement('span');
+          lbl.textContent = item.label;
+          row.appendChild(lbl);
+          if (item.shortcut) {
+            var sc = document.createElement('span');
+            sc.className = 'toolbar-dropdown-shortcut';
+            sc.textContent = item.shortcut;
+            row.appendChild(sc);
+          }
+          row.addEventListener('click', function() {
+            menu.classList.remove('open');
+            item.action();
+          });
+          menu.appendChild(row);
+        })(items[i]);
+      }
+    },
+
+    toJSON: function() {
+      return {
+        drawdio_version: 1,
+        canvas: {
+          width: App.state.canvasWidth,
+          height: App.state.canvasHeight,
+          bgColor: App.state.bgColor,
+          gridSize: App.state.gridSize,
+        },
+        components: App.state.components.map(function(c) {
+          return JSON.parse(JSON.stringify(c));
+        }),
+        groups: App.state.groups.map(function(g) {
+          return JSON.parse(JSON.stringify(g));
+        })
+      };
+    },
+
+    fromJSON: function(json) {
+      if (!json || !json.drawdio_version) {
+        alert('Invalid Drawdio file.');
+        return;
+      }
+      // Clear current state
+      App.state.components = [];
+      App.state.groups = [];
+      App.state.selectedIds = [];
+      App.state.clipboard = [];
+      App.history._undoStack = [];
+      App.history._redoStack = [];
+
+      // Clean up all defs
+      while (App.canvas.defs.childNodes.length > 1) {
+        // Keep grid pattern (first child)
+        if (App.canvas.defs.lastChild !== App.canvas.defs.firstChild) {
+          App.canvas.defs.removeChild(App.canvas.defs.lastChild);
+        } else break;
+      }
+
+      if (json.canvas) {
+        App.canvas.resize(json.canvas.width || 900, json.canvas.height || 600);
+        App.state.bgColor = json.canvas.bgColor || '#1a1a1a';
+        App.canvas.bgRect.setAttribute('fill', App.state.bgColor);
+        App.state.gridSize = json.canvas.gridSize || 20;
+      }
+
+      if (json.components) {
+        // Find max ID to set nextId
+        var maxNum = 0;
+        for (var i = 0; i < json.components.length; i++) {
+          var c = json.components[i];
+          var m = c.id.match(/_(\d+)$/);
+          if (m) maxNum = Math.max(maxNum, parseInt(m[1]));
+          App.state.components.push(c);
+        }
+        App.state.nextId = maxNum + 1;
+      }
+
+      if (json.groups) {
+        App.state.groups = json.groups;
+      }
+
+      App.components.renderAll();
+      App.selection.clear();
+      App.state.isDirty = false;
+    },
+
+    newProject: function() {
+      if (App.state.isDirty) {
+        if (!confirm('Unsaved changes will be lost. Continue?')) return;
+      }
+      this.fromJSON({ drawdio_version: 1, canvas: { width: 900, height: 600, bgColor: '#1a1a1a', gridSize: 20 }, components: [], groups: [] });
+      App.state.fileName = null;
+      document.title = 'Drawdio';
+    },
+
+    save: function() {
+      var json = this.toJSON();
+      var str = JSON.stringify(json, null, 2);
+      var name = App.state.fileName || 'untitled.drawdio.json';
+      this._download(str, name, 'application/json');
+      App.state.isDirty = false;
+      App.state.fileName = name;
+      document.title = 'Drawdio — ' + name;
+    },
+
+    saveAs: function() {
+      var name = prompt('File name:', App.state.fileName || 'untitled.drawdio.json');
+      if (!name) return;
+      if (!name.endsWith('.drawdio.json') && !name.endsWith('.json')) {
+        name += '.drawdio.json';
+      }
+      App.state.fileName = name;
+      this.save();
+    },
+
+    autoSave: function() {
+      if (App.state.components.length === 0) return;
+      try {
+        var json = this.toJSON();
+        localStorage.setItem('drawdio_autosave', JSON.stringify(json));
+        localStorage.setItem('drawdio_autosave_time', Date.now().toString());
+        // Flash indicator
+        var dot = document.getElementById('autosave-dot');
+        dot.classList.add('flash');
+        setTimeout(function() { dot.classList.remove('flash'); }, 1500);
+      } catch (e) {
+        // localStorage full or unavailable — silently fail
+      }
+    },
+
+    checkAutoSave: function() {
+      try {
+        var saved = localStorage.getItem('drawdio_autosave');
+        var time = localStorage.getItem('drawdio_autosave_time');
+        if (saved && time) {
+          var ago = Math.round((Date.now() - parseInt(time)) / 60000);
+          var label = ago < 1 ? 'just now' : ago + ' min ago';
+          if (confirm('Restore auto-saved project from ' + label + '?')) {
+            this.fromJSON(JSON.parse(saved));
+          }
+        }
+      } catch (e) {}
+    },
+
+    exportPNG: function(scale, transparent) {
+      scale = scale || 1;
+      var svgEl = App.canvas.svg;
+      var w = App.state.canvasWidth;
+      var h = App.state.canvasHeight;
+
+      // Clone SVG for serialization
+      var clone = svgEl.cloneNode(true);
+      // Reset viewBox to full canvas
+      clone.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+      clone.setAttribute('width', w * scale);
+      clone.setAttribute('height', h * scale);
+
+      // Remove selection layer contents
+      var selLayer = clone.querySelector('#selection-layer');
+      if (selLayer) {
+        while (selLayer.firstChild) selLayer.removeChild(selLayer.firstChild);
+      }
+
+      // If transparent, remove bg and grid
+      if (transparent) {
+        var bgRect = clone.querySelectorAll('rect');
+        if (bgRect[0]) bgRect[0].setAttribute('fill', 'transparent');
+        var gridRect = clone.querySelectorAll('rect')[1];
+        if (gridRect) gridRect.setAttribute('visibility', 'hidden');
+      }
+
+      // Inline all defs from the main SVG
+      var defs = App.canvas.defs.cloneNode(true);
+      var existingDefs = clone.querySelector('defs');
+      if (existingDefs) {
+        clone.replaceChild(defs, existingDefs);
+      }
+
+      var serializer = new XMLSerializer();
+      var svgString = serializer.serializeToString(clone);
+      var svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      var url = URL.createObjectURL(svgBlob);
+
+      var img = new Image();
+      img.onload = function() {
+        var canvas = document.createElement('canvas');
+        canvas.width = w * scale;
+        canvas.height = h * scale;
+        var ctx = canvas.getContext('2d');
+        if (!transparent) {
+          ctx.fillStyle = App.state.bgColor;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+
+        canvas.toBlob(function(blob) {
+          var suffix = transparent ? '-transparent' : '';
+          App.io._download(blob, 'drawdio-export' + suffix + '-' + scale + 'x.png', 'image/png');
+        }, 'image/png');
+      };
+      img.src = url;
+    },
+
+    exportSVG: function() {
+      var svgEl = App.canvas.svg;
+      var w = App.state.canvasWidth;
+      var h = App.state.canvasHeight;
+
+      var clone = svgEl.cloneNode(true);
+      clone.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+      clone.setAttribute('width', w);
+      clone.setAttribute('height', h);
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+      // Remove selection layer
+      var selLayer = clone.querySelector('#selection-layer');
+      if (selLayer) {
+        while (selLayer.firstChild) selLayer.removeChild(selLayer.firstChild);
+      }
+
+      // Inline defs
+      var defs = App.canvas.defs.cloneNode(true);
+      var existingDefs = clone.querySelector('defs');
+      if (existingDefs) clone.replaceChild(defs, existingDefs);
+
+      var serializer = new XMLSerializer();
+      var svgString = '<?xml version="1.0" encoding="UTF-8"?>\n' + serializer.serializeToString(clone);
+      this._download(svgString, 'drawdio-export.svg', 'image/svg+xml');
+    },
+
+    copyJSONToClipboard: function() {
+      var json = this.toJSON();
+      var str = JSON.stringify(json, null, 2);
+      navigator.clipboard.writeText(str).then(function() {
+        // Brief visual feedback
+        var dot = document.getElementById('autosave-dot');
+        dot.style.background = '#4fc3f7';
+        dot.classList.add('flash');
+        setTimeout(function() {
+          dot.classList.remove('flash');
+          dot.style.background = '';
+        }, 1500);
+      });
+    },
+
+    _download: function(data, filename, mimeType) {
+      var blob;
+      if (data instanceof Blob) {
+        blob = data;
+      } else {
+        blob = new Blob([data], { type: mimeType });
+      }
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  },
+
+  // ============================================================
+  // TOOLTIPS
+  // ============================================================
+  tooltip: {
+    _el: null,
+    _showTimer: null,
+    _currentId: null,
+
+    init: function() {
+      var tip = document.createElement('div');
+      tip.className = 'drawdio-tooltip';
+      document.body.appendChild(tip);
+      this._el = tip;
+
+      var self = this;
+      var svg = App.canvas.svg;
+
+      svg.addEventListener('mousemove', function(e) {
+        if (!App.state.tooltipsEnabled) return;
+        var pt = App.canvas.screenToCanvas(e.clientX, e.clientY);
+        var comp = App.components.getAtPoint(pt.x, pt.y);
+        if (comp && comp.id !== self._currentId) {
+          self._currentId = comp.id;
+          clearTimeout(self._showTimer);
+          self._showTimer = setTimeout(function() {
+            self._show(comp, e.clientX, e.clientY);
+          }, 400);
+        } else if (!comp) {
+          self.hide();
+        }
+        if (comp && self._el.classList.contains('visible')) {
+          self._el.style.left = (e.clientX + 12) + 'px';
+          self._el.style.top = (e.clientY + 16) + 'px';
+        }
+      });
+
+      svg.addEventListener('mouseleave', function() { self.hide(); });
+      svg.addEventListener('mousedown', function() { self.hide(); });
+    },
+
+    _show: function(comp, x, y) {
+      var factory = App.components.registry[comp.type];
+      var typeName = factory ? factory.displayName : comp.type;
+      var label = comp.label || '';
+
+      while (this._el.firstChild) this._el.removeChild(this._el.firstChild);
+
+      if (label) {
+        var labelSpan = document.createElement('span');
+        labelSpan.textContent = label;
+        this._el.appendChild(labelSpan);
+      }
+      if (label && typeName) {
+        var space = document.createTextNode(' ');
+        this._el.appendChild(space);
+      }
+      var typeSpan = document.createElement('span');
+      typeSpan.className = 'drawdio-tooltip-type';
+      typeSpan.textContent = '(' + typeName + ')';
+      this._el.appendChild(typeSpan);
+
+      this._el.style.left = (x + 12) + 'px';
+      this._el.style.top = (y + 16) + 'px';
+      this._el.classList.add('visible');
+    },
+
+    hide: function() {
+      clearTimeout(this._showTimer);
+      this._currentId = null;
+      if (this._el) this._el.classList.remove('visible');
+    }
+  },
+
+  // ============================================================
+  // LEFT PANEL — resize & toggle
+  // ============================================================
+  panel: {
+    _resizing: false,
+    _startX: 0,
+    _startW: 0,
+    _minWidth: 140,
+    _maxWidth: 400,
+    _collapsed: false,
+    _lastWidth: 180,
+
+    init: function() {
+      var self = this;
+      var panelEl = document.getElementById('left-panel');
+      var handle = document.getElementById('panel-resize-handle');
+      var toggle = document.getElementById('panel-toggle');
+
+      // Position toggle button
+      this._updateTogglePosition();
+
+      // Resize drag
+      handle.addEventListener('mousedown', function(e) {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        self._resizing = true;
+        self._startX = e.clientX;
+        self._startW = panelEl.offsetWidth;
+        handle.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      window.addEventListener('mousemove', function(e) {
+        if (!self._resizing) return;
+        var dx = e.clientX - self._startX;
+        var newW = Math.max(self._minWidth, Math.min(self._maxWidth, self._startW + dx));
+        panelEl.style.width = newW + 'px';
+        self._lastWidth = newW;
+        self._updateTogglePosition();
+      });
+
+      window.addEventListener('mouseup', function() {
+        if (!self._resizing) return;
+        self._resizing = false;
+        handle.classList.remove('active');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      });
+
+      // Toggle
+      toggle.addEventListener('click', function() {
+        self._collapsed = !self._collapsed;
+        if (self._collapsed) {
+          panelEl.classList.add('collapsed');
+          toggle.textContent = '\u203A'; // ›
+        } else {
+          panelEl.classList.remove('collapsed');
+          panelEl.style.width = self._lastWidth + 'px';
+          toggle.textContent = '\u2039'; // ‹
+        }
+        self._updateTogglePosition();
+      });
+    },
+
+    _updateTogglePosition: function() {
+      var toggle = document.getElementById('panel-toggle');
+      var panelEl = document.getElementById('left-panel');
+      if (this._collapsed) {
+        toggle.style.left = '0px';
+      } else {
+        toggle.style.left = panelEl.offsetWidth + 'px';
+      }
+    }
+  },
+
+  // ============================================================
+  // TOOLBAR
+  // ============================================================
+  toolbar: {
+    init: function() {
+      document.getElementById('preset-select').addEventListener('change', function(e) {
+        var val = e.target.value;
+        if (val === 'custom') {
+          var w = prompt('Canvas width:', App.state.canvasWidth);
+          var h = prompt('Canvas height:', App.state.canvasHeight);
+          if (w && h) {
+            App.canvas.resize(parseInt(w), parseInt(h));
+          }
+          e.target.value = App.state.canvasWidth + ',' + App.state.canvasHeight;
+        } else {
+          var parts = val.split(',');
+          App.canvas.resize(parseInt(parts[0]), parseInt(parts[1]));
+        }
+      });
+
+      document.getElementById('btn-grid').addEventListener('click', function() {
+        App.grid.toggle();
+      });
+
+      document.getElementById('btn-snap').addEventListener('click', function() {
+        App.state.snapEnabled = !App.state.snapEnabled;
+        document.getElementById('btn-snap').classList.toggle('active', App.state.snapEnabled);
+      });
+
+      document.getElementById('btn-tips').addEventListener('click', function() {
+        App.state.tooltipsEnabled = !App.state.tooltipsEnabled;
+        document.getElementById('btn-tips').classList.toggle('active', App.state.tooltipsEnabled);
+        if (!App.state.tooltipsEnabled) App.tooltip.hide();
+      });
+    }
+  },
+
+  // ============================================================
+  // KEYBOARD SHORTCUTS
+  // ============================================================
+  shortcuts: {
+    // Reusable actions (called by both keyboard and context menu)
+    _doCopy: function() {
+      if (App.state.selectedIds.length === 0) return;
+      App.state.clipboard = [];
+      for (var i = 0; i < App.state.selectedIds.length; i++) {
+        var src = App.components.getById(App.state.selectedIds[i]);
+        if (src) App.state.clipboard.push(JSON.parse(JSON.stringify(src)));
+      }
+    },
+
+    _doPaste: function() {
+      if (App.state.clipboard.length === 0) return;
+      var pastedIds = [];
+      for (var i = 0; i < App.state.clipboard.length; i++) {
+        var copy = JSON.parse(JSON.stringify(App.state.clipboard[i]));
+        copy.id = copy.type + '_' + App.state.nextId++;
+        copy.x += App.state.gridSize;
+        copy.y += App.state.gridSize;
+        copy.zIndex = App.state.components.length;
+        App.state.components.push(copy);
+        App.components.renderOne(copy);
+        pastedIds.push(copy.id);
+      }
+      for (var j = 0; j < App.state.clipboard.length; j++) {
+        App.state.clipboard[j].x += App.state.gridSize;
+        App.state.clipboard[j].y += App.state.gridSize;
+      }
+      var captured = pastedIds.slice();
+      App.history.push({
+        type: 'paste',
+        undo: function() { for (var k = 0; k < captured.length; k++) App.components.remove(captured[k], true); },
+        redo: function() {}
+      });
+      App.state.selectedIds = pastedIds;
+      App.selection.renderHandles();
+      if (pastedIds.length === 1) App.properties.show(App.components.getById(pastedIds[0]));
+      App.state.isDirty = true;
+    },
+
+    _doCut: function() {
+      this._doCopy();
+      App.selection.deleteSelected();
+    },
+
+    _doDuplicate: function() {
+      if (App.state.selectedIds.length === 0) return;
+      var newIds = App.components.duplicate(App.state.selectedIds);
+      App.state.selectedIds = newIds;
+      App.selection.renderHandles();
+      if (newIds.length === 1) App.properties.show(App.components.getById(newIds[0]));
+    },
+
+    init: function() {
+      var self = this;
+
+      // Right-click context menu
+      document.getElementById('canvas-container').addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        App.tooltip.hide();
+        var pt = App.canvas.screenToCanvas(e.clientX, e.clientY);
+        var comp = App.components.getAtPoint(pt.x, pt.y);
+        if (comp && !App.selection.isSelected(comp.id)) {
+          App.selection.select(comp.id);
+        }
+        var items = App.state.selectedIds.length > 0
+          ? App.contextMenu.buildForSelection()
+          : App.contextMenu.buildForCanvas();
+        App.contextMenu.show(e.clientX, e.clientY, items);
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+          return;
+        }
+
+        var ctrl = e.ctrlKey || e.metaKey;
+        var shift = e.shiftKey;
+        var key = e.key.toLowerCase();
+
+        if (key === 'delete' || key === 'backspace') {
+          e.preventDefault();
+          App.selection.deleteSelected();
+        } else if (key === 'g' && ctrl && shift) {
+          e.preventDefault();
+          App.groups.ungroupSelected();
+        } else if (key === 'g' && ctrl) {
+          e.preventDefault();
+          if (App.state.selectedIds.length > 1) {
+            App.groups.create(App.state.selectedIds.slice());
+          }
+        } else if (key === 'g' && !ctrl) {
+          e.preventDefault();
+          App.grid.toggle();
+        } else if (key === 'z' && ctrl && shift) {
+          e.preventDefault();
+          App.history.redo();
+        } else if (key === 'z' && ctrl) {
+          e.preventDefault();
+          App.history.undo();
+        } else if (key === 'a' && ctrl) {
+          e.preventDefault();
+          App.selection.selectAll();
+        } else if (key === 'd' && ctrl) {
+          e.preventDefault();
+          self._doDuplicate();
+        } else if (key === 'c' && ctrl && shift) {
+          e.preventDefault();
+          App.io.copyJSONToClipboard();
+        } else if (key === 'c' && ctrl) {
+          e.preventDefault();
+          self._doCopy();
+        } else if (key === 'v' && ctrl) {
+          e.preventDefault();
+          self._doPaste();
+        } else if (key === 'x' && ctrl) {
+          e.preventDefault();
+          self._doCut();
+        } else if (key === ']' && ctrl && shift) {
+          e.preventDefault();
+          App.zorder.bringToFront(App.state.selectedIds);
+        } else if (key === ']' && ctrl) {
+          e.preventDefault();
+          App.zorder.bringForward(App.state.selectedIds);
+        } else if (key === '[' && ctrl && shift) {
+          e.preventDefault();
+          App.zorder.sendToBack(App.state.selectedIds);
+        } else if (key === '[' && ctrl) {
+          e.preventDefault();
+          App.zorder.sendBackward(App.state.selectedIds);
+        } else if ((key === '=' || key === '+') && !ctrl) {
+          e.preventDefault();
+          App.canvas.zoom(0.1, window.innerWidth / 2, window.innerHeight / 2);
+        } else if (key === '-' && !ctrl) {
+          e.preventDefault();
+          App.canvas.zoom(-0.1, window.innerWidth / 2, window.innerHeight / 2);
+        } else if (key === '0' && ctrl) {
+          e.preventDefault();
+          App.canvas.zoomToFit();
+        } else if (key === 's' && ctrl) {
+          e.preventDefault();
+          App.io.save();
+        } else if (key === 'o' && ctrl) {
+          e.preventDefault();
+          document.getElementById('file-input').click();
+        } else if (key === 'e' && ctrl && shift) {
+          e.preventDefault();
+          App.io.exportSVG();
+        } else if (key === 'e' && ctrl) {
+          e.preventDefault();
+          App.io.exportPNG(1);
+        } else if (key === 'escape') {
+          App.contextMenu.hide();
+          App.palette.cancelPlacing();
+          App.selection.clear();
+        }
+      });
+    }
+  },
+};
+
+// ============================================================
+// BOOT
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+  App._registerComponents();
+  App.init();
+});
+</script>
+</body>
+</html>
