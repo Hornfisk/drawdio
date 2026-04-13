@@ -1,0 +1,290 @@
+import { appState } from '../state/app.svelte.js';
+import { select, addToSelection, clearSelection, isSelected, removeFromSelection } from '../state/selection.js';
+import { createComponent, getComponentAtPoint } from '../state/actions.js';
+import { screenToCanvas, snap } from '../utils/geometry.js';
+import { pushHistory } from '../state/history.js';
+import { expandSelection } from '../state/groups.js';
+
+type DragState = 'idle' | 'moving' | 'selecting' | 'resizing' | 'panning';
+
+let state: DragState = 'idle';
+let startX = 0, startY = 0;
+let movingStarts: { id: string; x: number; y: number }[] = [];
+let altHeld = false;
+let spaceHeld = false;
+let hasMoved = false;
+let resizeHandle: string | null = null;
+let resizeStartBounds: { x: number; y: number; w: number; h: number } | null = null;
+let movingIds: string[] = [];
+let panStartX = 0, panStartY = 0;
+let panStartVBX = 0, panStartVBY = 0;
+let rubberBand = $state<{ x: number; y: number; w: number; h: number } | null>(null);
+
+export function getRubberBand() {
+  return rubberBand;
+}
+
+export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => void {
+  function onMouseDown(e: MouseEvent) {
+    if (e.button === 1) {
+      // Middle-click pan
+      e.preventDefault();
+      state = 'panning';
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      panStartVBX = appState.panX;
+      panStartVBY = appState.panY;
+      containerEl.style.cursor = 'grabbing';
+      return;
+    }
+
+    if (e.button !== 0) return;
+
+    // Space+click = pan
+    if (spaceHeld) {
+      state = 'panning';
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      panStartVBX = appState.panX;
+      panStartVBY = appState.panY;
+      containerEl.style.cursor = 'grabbing';
+      e.preventDefault();
+      return;
+    }
+
+    const pt = screenToCanvas(svgEl, e.clientX, e.clientY);
+
+    // Check resize handle
+    const handleEl = (e.target as Element).closest?.('[data-handle]');
+    if (handleEl) {
+      const selFor = handleEl.closest('[data-selection-for]');
+      if (selFor) {
+        const compId = selFor.getAttribute('data-selection-for')!;
+        const comp = appState.components.find(c => c.id === compId);
+        if (comp) {
+          state = 'resizing';
+          pushHistory();
+          resizeHandle = handleEl.getAttribute('data-handle');
+          resizeStartBounds = { x: comp.x, y: comp.y, w: comp.width, h: comp.height };
+          startX = pt.x;
+          startY = pt.y;
+          movingIds = [compId];
+          hasMoved = false;
+          e.preventDefault();
+          return;
+        }
+      }
+    }
+
+    // Placement mode
+    if (appState.placingType) {
+      const snapped = snap(pt.x, pt.y);
+      const data = createComponent(appState.placingType, snapped.x, snapped.y);
+      if (data) {
+        select(data.id);
+      }
+      appState.placingType = null;
+      e.preventDefault();
+      return;
+    }
+
+    // Check component under cursor
+    const clicked = getComponentAtPoint(pt.x, pt.y);
+    if (clicked) {
+      if (e.shiftKey) {
+        if (isSelected(clicked.id)) {
+          removeFromSelection(clicked.id);
+        } else {
+          addToSelection(clicked.id);
+        }
+      } else if (!isSelected(clicked.id)) {
+        select(clicked.id);
+      }
+
+      state = 'moving';
+      pushHistory();
+      startX = pt.x;
+      startY = pt.y;
+      // Expand selection to include group members
+      movingIds = expandSelection([...appState.selectedIds]);
+      appState.selectedIds = movingIds;
+      movingStarts = movingIds
+        .map(id => appState.components.find(c => c.id === id))
+        .filter(c => c != null)
+        .map(c => ({ id: c.id, x: c.x, y: c.y }));
+      hasMoved = false;
+      e.preventDefault();
+      return;
+    }
+
+    // Empty area — rubber-band select
+    clearSelection();
+    state = 'selecting';
+    startX = pt.x;
+    startY = pt.y;
+    hasMoved = false;
+    rubberBand = { x: pt.x, y: pt.y, w: 0, h: 0 };
+    e.preventDefault();
+  }
+
+  function onMouseMove(e: MouseEvent) {
+    if (state === 'idle') return;
+
+    if (state === 'panning') {
+      const pdx = e.clientX - panStartX;
+      const pdy = e.clientY - panStartY;
+      const vbW = appState.canvasWidth / appState.zoom;
+      const scale = vbW / svgEl.clientWidth;
+      appState.panX = panStartVBX - pdx * scale;
+      appState.panY = panStartVBY - pdy * scale;
+      return;
+    }
+
+    const pt = screenToCanvas(svgEl, e.clientX, e.clientY);
+
+    if (state === 'moving') {
+      hasMoved = true;
+      const dx = pt.x - startX;
+      const dy = pt.y - startY;
+      for (const start of movingStarts) {
+        const comp = appState.components.find(c => c.id === start.id);
+        if (comp) {
+          const snapped = altHeld
+            ? { x: start.x + dx, y: start.y + dy }
+            : snap(start.x + dx, start.y + dy);
+          comp.x = snapped.x;
+          comp.y = snapped.y;
+        }
+      }
+    } else if (state === 'selecting' && rubberBand) {
+      hasMoved = true;
+      rubberBand = {
+        x: Math.min(startX, pt.x),
+        y: Math.min(startY, pt.y),
+        w: Math.abs(pt.x - startX),
+        h: Math.abs(pt.y - startY),
+      };
+    } else if (state === 'resizing' && resizeStartBounds && resizeHandle) {
+      hasMoved = true;
+      const rdx = pt.x - startX;
+      const rdy = pt.y - startY;
+      const b = resizeStartBounds;
+      let newX = b.x, newY = b.y, newW = b.w, newH = b.h;
+
+      if (resizeHandle.includes('r')) { newW = Math.max(10, b.w + rdx); }
+      if (resizeHandle.includes('l')) { newW = Math.max(10, b.w - rdx); newX = b.x + b.w - newW; }
+      if (resizeHandle.includes('b')) { newH = Math.max(10, b.h + rdy); }
+      if (resizeHandle.includes('t')) { newH = Math.max(10, b.h - rdy); newY = b.y + b.h - newH; }
+
+      const snapped = snap(newX, newY);
+      const comp = appState.components.find(c => c.id === movingIds[0]);
+      if (comp) {
+        comp.x = snapped.x;
+        comp.y = snapped.y;
+        comp.width = Math.round(newW);
+        comp.height = Math.round(newH);
+      }
+    }
+  }
+
+  function onMouseUp(_e: MouseEvent) {
+    if (state === 'panning') {
+      state = 'idle';
+      containerEl.style.cursor = spaceHeld ? 'grab' : '';
+      return;
+    }
+    if (state === 'selecting' && rubberBand && hasMoved) {
+      const rb = rubberBand;
+      const selected: string[] = [];
+      for (const c of appState.components) {
+        if (c.x + c.width > rb.x && c.x < rb.x + rb.w &&
+            c.y + c.height > rb.y && c.y < rb.y + rb.h) {
+          selected.push(c.id);
+        }
+      }
+      appState.selectedIds = selected;
+    }
+    if (state === 'moving' && hasMoved) {
+      appState.isDirty = true;
+    }
+    if (state === 'resizing' && hasMoved) {
+      appState.isDirty = true;
+    }
+
+    state = 'idle';
+    movingIds = [];
+    movingStarts = [];
+    resizeHandle = null;
+    resizeStartBounds = null;
+    rubberBand = null;
+  }
+
+  function onKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Alt') altHeld = true;
+    if (e.key === ' ' && (e.target as Element).tagName !== 'INPUT' && (e.target as Element).tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      spaceHeld = true;
+      containerEl.style.cursor = 'grab';
+    }
+  }
+
+  function onKeyUp(e: KeyboardEvent) {
+    if (e.key === 'Alt') altHeld = false;
+    if (e.key === ' ') {
+      spaceHeld = false;
+      if (state !== 'panning') containerEl.style.cursor = '';
+    }
+  }
+
+  function onWheel(e: WheelEvent) {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const newZoom = Math.max(0.25, Math.min(4, appState.zoom + delta));
+
+      // Zoom toward cursor
+      const rect = svgEl.getBoundingClientRect();
+      const mx = (e.clientX - rect.left) / rect.width;
+      const my = (e.clientY - rect.top) / rect.height;
+      const oldVBW = appState.canvasWidth / appState.zoom;
+      const oldVBH = appState.canvasHeight / appState.zoom;
+      const newVBW = appState.canvasWidth / newZoom;
+      const newVBH = appState.canvasHeight / newZoom;
+
+      appState.panX += (oldVBW - newVBW) * mx;
+      appState.panY += (oldVBH - newVBH) * my;
+      appState.zoom = newZoom;
+    }
+  }
+
+  function onContextMenu(e: MouseEvent) {
+    e.preventDefault();
+    const pt = screenToCanvas(svgEl, e.clientX, e.clientY);
+    const comp = getComponentAtPoint(pt.x, pt.y);
+    if (comp && !isSelected(comp.id)) {
+      select(comp.id);
+    }
+    window.dispatchEvent(new CustomEvent('drawdio-contextmenu', {
+      detail: { x: e.clientX, y: e.clientY, hasSelection: appState.selectedIds.length > 0 }
+    }));
+  }
+
+  svgEl.addEventListener('mousedown', onMouseDown);
+  svgEl.addEventListener('contextmenu', onContextMenu);
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+  containerEl.addEventListener('wheel', onWheel, { passive: false });
+
+  // Cleanup
+  return () => {
+    svgEl.removeEventListener('mousedown', onMouseDown);
+    svgEl.removeEventListener('contextmenu', onContextMenu);
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+    window.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('keyup', onKeyUp);
+    containerEl.removeEventListener('wheel', onWheel);
+  };
+}
