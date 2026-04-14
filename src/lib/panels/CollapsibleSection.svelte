@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { Snippet } from 'svelte';
 
   let { title, children, collapsed = false }: {
@@ -7,7 +8,8 @@
     collapsed?: boolean;
   } = $props();
 
-  let isCollapsed = $state(collapsed);
+  // untrack tells Svelte this initial capture is intentional — locally mutable
+  let isCollapsed = $state(untrack(() => collapsed));
 </script>
 
 <div

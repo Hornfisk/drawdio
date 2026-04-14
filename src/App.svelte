@@ -21,7 +21,7 @@
 <Toolbar />
 
 <!-- App body -->
-<div id="app">
+<div id="app-layout">
   <!-- Left panel (palette) -->
   <div class="left-panel">
     <Palette />
