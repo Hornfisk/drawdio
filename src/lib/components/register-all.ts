@@ -1,47 +1,32 @@
 import { register } from './registry.js';
 
 // Controls
-import RotaryKnob from './controls/RotaryKnob.svelte';
 import MomentaryButton from './controls/MomentaryButton.svelte';
-import ToggleSwitch from './controls/ToggleSwitch.svelte';
-import VerticalSlider from './controls/VerticalSlider.svelte';
 import Dropdown from './controls/Dropdown.svelte';
-import XYPad from './controls/XYPad.svelte';
+import VerticalSlider from './controls/VerticalSlider.svelte';
 import MidiKeyboard from './controls/MidiKeyboard.svelte';
+import RotaryKnob from './controls/RotaryKnob.svelte';
+import ToggleSwitch from './controls/ToggleSwitch.svelte';
+import XYPad from './controls/XYPad.svelte';
 
 // Display
-import LevelMeter from './display/LevelMeter.svelte';
-import WaveformDisplay from './display/WaveformDisplay.svelte';
-import SpectrumAnalyzer from './display/SpectrumAnalyzer.svelte';
-import StepSequencer from './display/StepSequencer.svelte';
-import AcidStepSequencer from './display/AcidStepSequencer.svelte';
 import LabelText from './display/LabelText.svelte';
 import LedIndicator from './display/LedIndicator.svelte';
+import LevelMeter from './display/LevelMeter.svelte';
 import ValueReadout from './display/ValueReadout.svelte';
+import StepSequencer from './display/StepSequencer.svelte';
+import AcidStepSequencer from './display/AcidStepSequencer.svelte';
+import SpectrumAnalyzer from './display/SpectrumAnalyzer.svelte';
+import WaveformDisplay from './display/WaveformDisplay.svelte';
 
 // Layout
-import PanelGroup from './layout/PanelGroup.svelte';
-import Separator from './layout/Separator.svelte';
 import SectionHeader from './layout/SectionHeader.svelte';
 import ImagePlaceholder from './layout/ImagePlaceholder.svelte';
+import PanelGroup from './layout/PanelGroup.svelte';
+import Separator from './layout/Separator.svelte';
 
 export function registerAllComponents(): void {
-  // --- Controls ---
-  register('rotary_knob', {
-    component: RotaryKnob,
-    category: 'Controls',
-    displayName: 'Knob',
-    defaultProps: {
-      width: 48, height: 60, color: '#4fc3f7', label: 'Knob',
-      properties: { min: 0, max: 100, default: 50, unit: '' },
-    },
-    editableProperties: [
-      { key: 'min', label: 'Min', type: 'number', propPath: 'properties.min' },
-      { key: 'max', label: 'Max', type: 'number', propPath: 'properties.max' },
-      { key: 'default', label: 'Default', type: 'number', propPath: 'properties.default' },
-      { key: 'unit', label: 'Unit', type: 'text', propPath: 'properties.unit' },
-    ],
-  });
+  // --- Controls (alphabetical by display name) ---
 
   register('momentary_button', {
     component: MomentaryButton,
@@ -54,16 +39,17 @@ export function registerAllComponents(): void {
     editableProperties: [],
   });
 
-  register('toggle_switch', {
-    component: ToggleSwitch,
+  register('dropdown', {
+    component: Dropdown,
     category: 'Controls',
-    displayName: 'Toggle',
+    displayName: 'Dropdown',
     defaultProps: {
-      width: 36, height: 32, color: '#4fc3f7', label: 'Toggle',
-      properties: { default: true },
+      width: 100, height: 24, color: '#4fc3f7', label: 'Mode',
+      properties: { options: 'LP 24dB,HP 12dB,BP,Notch', selected: 'LP 24dB' },
     },
     editableProperties: [
-      { key: 'default', label: 'On', type: 'checkbox', propPath: 'properties.default' },
+      { key: 'options', label: 'Options', type: 'text', propPath: 'properties.options' },
+      { key: 'selected', label: 'Value', type: 'text', propPath: 'properties.selected' },
     ],
   });
 
@@ -83,17 +69,48 @@ export function registerAllComponents(): void {
     ],
   });
 
-  register('dropdown', {
-    component: Dropdown,
+  register('midi_keyboard', {
+    component: MidiKeyboard,
     category: 'Controls',
-    displayName: 'Dropdown',
+    displayName: 'Keys',
     defaultProps: {
-      width: 100, height: 24, color: '#4fc3f7', label: 'Mode',
-      properties: { options: 'LP 24dB,HP 12dB,BP,Notch', selected: 'LP 24dB' },
+      width: 360, height: 90, color: '#888', label: '',
+      properties: { octaves: 2, pitchBend: true, modWheel: true, portsPosition: 'front' },
     },
     editableProperties: [
-      { key: 'options', label: 'Options', type: 'text', propPath: 'properties.options' },
-      { key: 'selected', label: 'Value', type: 'text', propPath: 'properties.selected' },
+      { key: 'octaves', label: 'Octaves', type: 'number', propPath: 'properties.octaves' },
+      { key: 'pitchBend', label: 'Pitch Bend', type: 'checkbox', propPath: 'properties.pitchBend' },
+      { key: 'modWheel', label: 'Mod Wheel', type: 'checkbox', propPath: 'properties.modWheel' },
+      { key: 'portsPosition', label: 'Ports', type: 'text', propPath: 'properties.portsPosition' },
+    ],
+  });
+
+  register('rotary_knob', {
+    component: RotaryKnob,
+    category: 'Controls',
+    displayName: 'Knob',
+    defaultProps: {
+      width: 48, height: 60, color: '#4fc3f7', label: 'Knob',
+      properties: { min: 0, max: 100, default: 50, unit: '' },
+    },
+    editableProperties: [
+      { key: 'min', label: 'Min', type: 'number', propPath: 'properties.min' },
+      { key: 'max', label: 'Max', type: 'number', propPath: 'properties.max' },
+      { key: 'default', label: 'Default', type: 'number', propPath: 'properties.default' },
+      { key: 'unit', label: 'Unit', type: 'text', propPath: 'properties.unit' },
+    ],
+  });
+
+  register('toggle_switch', {
+    component: ToggleSwitch,
+    category: 'Controls',
+    displayName: 'Toggle',
+    defaultProps: {
+      width: 36, height: 32, color: '#4fc3f7', label: 'Toggle',
+      properties: { default: true },
+    },
+    editableProperties: [
+      { key: 'default', label: 'On', type: 'checkbox', propPath: 'properties.default' },
     ],
   });
 
@@ -111,23 +128,37 @@ export function registerAllComponents(): void {
     ],
   });
 
-  register('midi_keyboard', {
-    component: MidiKeyboard,
-    category: 'Controls',
-    displayName: 'MIDI Keyboard',
+  // --- Display (alphabetical by display name) ---
+
+  register('label_text', {
+    component: LabelText,
+    category: 'Display',
+    displayName: 'Label',
     defaultProps: {
-      width: 360, height: 90, color: '#888', label: '',
-      properties: { octaves: 2, pitchBend: true, modWheel: true, portsPosition: 'front' },
+      width: 80, height: 20, color: '#ffffff', label: 'Label',
+      properties: { fontSize: 14, bold: false, italic: false, fontFamily: 'system-ui' },
     },
     editableProperties: [
-      { key: 'octaves', label: 'Octaves', type: 'number', propPath: 'properties.octaves' },
-      { key: 'pitchBend', label: 'Pitch Bend', type: 'checkbox', propPath: 'properties.pitchBend' },
-      { key: 'modWheel', label: 'Mod Wheel', type: 'checkbox', propPath: 'properties.modWheel' },
-      { key: 'portsPosition', label: 'Ports', type: 'text', propPath: 'properties.portsPosition' },
+      { key: 'fontSize', label: 'Size', type: 'number', propPath: 'properties.fontSize' },
+      { key: 'bold', label: 'Bold', type: 'checkbox', propPath: 'properties.bold' },
+      { key: 'italic', label: 'Italic', type: 'checkbox', propPath: 'properties.italic' },
+      { key: 'fontFamily', label: 'Font', type: 'text', propPath: 'properties.fontFamily' },
     ],
   });
 
-  // --- Display ---
+  register('led_indicator', {
+    component: LedIndicator,
+    category: 'Display',
+    displayName: 'LED',
+    defaultProps: {
+      width: 12, height: 12, color: '#ef5350', label: '',
+      properties: { on: true },
+    },
+    editableProperties: [
+      { key: 'on', label: 'On', type: 'checkbox', propPath: 'properties.on' },
+    ],
+  });
+
   register('level_meter', {
     component: LevelMeter,
     category: 'Display',
@@ -142,30 +173,22 @@ export function registerAllComponents(): void {
     ],
   });
 
-  register('waveform_display', {
-    component: WaveformDisplay,
+  register('value_readout', {
+    component: ValueReadout,
     category: 'Display',
-    displayName: 'Waveform',
+    displayName: 'Readout',
     defaultProps: {
-      width: 200, height: 80, color: '#4fc3f7', label: '',
-      properties: {},
-    },
-    editableProperties: [],
-  });
-
-  register('spectrum_analyzer', {
-    component: SpectrumAnalyzer,
-    category: 'Display',
-    displayName: 'Spectrum',
-    defaultProps: {
-      width: 200, height: 80, color: '#4fc3f7', label: '',
-      properties: { bars: 24 },
+      width: 72, height: 24, color: '#4fc3f7', label: '',
+      properties: { value: '440', unit: 'Hz', fontSize: 13 },
     },
     editableProperties: [
-      { key: 'bars', label: 'Bars', type: 'number', propPath: 'properties.bars' },
+      { key: 'value', label: 'Value', type: 'text', propPath: 'properties.value' },
+      { key: 'unit', label: 'Unit', type: 'text', propPath: 'properties.unit' },
+      { key: 'fontSize', label: 'Size', type: 'number', propPath: 'properties.fontSize' },
     ],
   });
 
+  // Sequencer variant group (Grid + Acid) — kept adjacent for variant system
   register('step_sequencer', {
     component: StepSequencer,
     category: 'Display',
@@ -206,51 +229,56 @@ export function registerAllComponents(): void {
     ],
   });
 
-  register('label_text', {
-    component: LabelText,
+  register('spectrum_analyzer', {
+    component: SpectrumAnalyzer,
     category: 'Display',
-    displayName: 'Label',
+    displayName: 'Spectrum',
     defaultProps: {
-      width: 80, height: 20, color: '#ffffff', label: 'Label',
-      properties: { fontSize: 14, bold: false, italic: false, fontFamily: 'system-ui' },
+      width: 200, height: 80, color: '#4fc3f7', label: '',
+      properties: { bars: 24 },
+    },
+    editableProperties: [
+      { key: 'bars', label: 'Bars', type: 'number', propPath: 'properties.bars' },
+    ],
+  });
+
+  register('waveform_display', {
+    component: WaveformDisplay,
+    category: 'Display',
+    displayName: 'Waveform',
+    defaultProps: {
+      width: 200, height: 80, color: '#4fc3f7', label: '',
+      properties: {},
+    },
+    editableProperties: [],
+  });
+
+  // --- Layout (alphabetical by display name) ---
+
+  register('section_header', {
+    component: SectionHeader,
+    category: 'Layout',
+    displayName: 'Header',
+    defaultProps: {
+      width: 150, height: 22, color: '#ccc', label: 'SECTION',
+      properties: { fontSize: 12 },
     },
     editableProperties: [
       { key: 'fontSize', label: 'Size', type: 'number', propPath: 'properties.fontSize' },
-      { key: 'bold', label: 'Bold', type: 'checkbox', propPath: 'properties.bold' },
-      { key: 'italic', label: 'Italic', type: 'checkbox', propPath: 'properties.italic' },
-      { key: 'fontFamily', label: 'Font', type: 'text', propPath: 'properties.fontFamily' },
     ],
   });
 
-  register('led_indicator', {
-    component: LedIndicator,
-    category: 'Display',
-    displayName: 'LED',
+  register('image_placeholder', {
+    component: ImagePlaceholder,
+    category: 'Layout',
+    displayName: 'Image',
     defaultProps: {
-      width: 12, height: 12, color: '#ef5350', label: '',
-      properties: { on: true },
+      width: 120, height: 80, color: '#555', label: 'Logo',
+      properties: {},
     },
-    editableProperties: [
-      { key: 'on', label: 'On', type: 'checkbox', propPath: 'properties.on' },
-    ],
+    editableProperties: [],
   });
 
-  register('value_readout', {
-    component: ValueReadout,
-    category: 'Display',
-    displayName: 'Readout',
-    defaultProps: {
-      width: 72, height: 24, color: '#4fc3f7', label: '',
-      properties: { value: '440', unit: 'Hz', fontSize: 13 },
-    },
-    editableProperties: [
-      { key: 'value', label: 'Value', type: 'text', propPath: 'properties.value' },
-      { key: 'unit', label: 'Unit', type: 'text', propPath: 'properties.unit' },
-      { key: 'fontSize', label: 'Size', type: 'number', propPath: 'properties.fontSize' },
-    ],
-  });
-
-  // --- Layout ---
   register('panel_group', {
     component: PanelGroup,
     category: 'Layout',
@@ -279,29 +307,5 @@ export function registerAllComponents(): void {
       { key: 'orientation', label: 'Dir', type: 'text', propPath: 'properties.orientation' },
       { key: 'thickness', label: 'Width', type: 'number', propPath: 'properties.thickness' },
     ],
-  });
-
-  register('section_header', {
-    component: SectionHeader,
-    category: 'Layout',
-    displayName: 'Header',
-    defaultProps: {
-      width: 150, height: 22, color: '#ccc', label: 'SECTION',
-      properties: { fontSize: 12 },
-    },
-    editableProperties: [
-      { key: 'fontSize', label: 'Size', type: 'number', propPath: 'properties.fontSize' },
-    ],
-  });
-
-  register('image_placeholder', {
-    component: ImagePlaceholder,
-    category: 'Layout',
-    displayName: 'Image',
-    defaultProps: {
-      width: 120, height: 80, color: '#555', label: 'Logo',
-      properties: {},
-    },
-    editableProperties: [],
   });
 }

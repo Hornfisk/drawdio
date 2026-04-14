@@ -77,6 +77,21 @@
     <rect x="18" y="0" width="5" height="12" rx="1" fill="#4fc3f7"/>
   </svg>
 
+{:else if type === 'acid_step_sequencer'}
+  <svg width="24" height="16" viewBox="0 0 24 16">
+    <rect x="0" y="0" width="24" height="16" rx="1" fill="#0e0e10"/>
+    <rect x="1" y="1" width="5" height="5" rx="0.5" fill="#c42a2a"/>
+    <rect x="7" y="1" width="5" height="5" rx="0.5" fill="#2a2a30"/>
+    <rect x="13" y="1" width="5" height="5" rx="0.5" fill="#f0dc3c"/>
+    <rect x="19" y="1" width="4" height="5" rx="0.5" fill="#2a2a30"/>
+    <rect x="1" y="8" width="5" height="7" rx="0.5" fill="#1c1c20"/>
+    <rect x="7" y="8" width="5" height="7" rx="0.5" fill="#1c1c20"/>
+    <rect x="13" y="8" width="5" height="7" rx="0.5" fill="#1c1c20"/>
+    <rect x="19" y="8" width="4" height="7" rx="0.5" fill="#1c1c20"/>
+    <rect x="2" y="10" width="3" height="2" rx="0.3" fill="#bababc"/>
+    <rect x="14" y="10" width="3" height="2" rx="0.3" fill="#782818"/>
+  </svg>
+
 {:else if type === 'label_text'}
   <svg width="20" height="14" viewBox="0 0 20 14">
     <text x="2" y="11" fill="#ccc" font-size="11" font-family="system-ui, sans-serif" font-weight="bold">Aa</text>

@@ -1,14 +1,114 @@
 <script lang="ts">
-  import { appState, COLORS } from '../state/app.svelte.js';
+  import { appState } from '../state/app.svelte.js';
   import { getSelectedComponents } from '../state/derived.svelte.js';
   import { getEntry } from '../components/registry.js';
   import CollapsibleSection from './CollapsibleSection.svelte';
   import EffectsEditor from './EffectsEditor.svelte';
+  import ColorPicker from '../ui/ColorPicker.svelte';
 
   const selected = $derived(
     getSelectedComponents().length === 1 ? getSelectedComponents()[0] : null
   );
   const entry = $derived(selected ? getEntry(selected.type) : null);
+
+  // --- Swatch persistence ---
+  const DEFAULT_SWATCHES = ['#4fc3f7', '#f06292', '#66bb6a', '#ffa726', '#ef5350', '#ffee58', '#ab47bc', '#ffffff'];
+
+  function loadSwatches(): string[] {
+    try {
+      const raw = localStorage.getItem('drawdio_swatches');
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length === 8) return arr;
+      }
+    } catch {}
+    return [...DEFAULT_SWATCHES];
+  }
+
+  let swatches = $state(loadSwatches());
+  let pickerOpen = $state(false);
+  let pickerX = $state(0);
+  let pickerY = $state(0);
+
+  function openPicker(e: MouseEvent) {
+    if (!selected) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    let px = rect.left;
+    let py = rect.bottom + 6;
+    if (px + 220 > window.innerWidth) px = window.innerWidth - 222;
+    if (py + 310 > window.innerHeight) py = rect.top - 314;
+    pickerX = px;
+    pickerY = py;
+    pickerOpen = true;
+  }
+
+  function saveSwatch(index: number, hex: string) {
+    swatches = swatches.map((s, i) => i === index ? hex : s);
+    localStorage.setItem('drawdio_swatches', JSON.stringify(swatches));
+  }
+
+  function resetSwatches() {
+    swatches = [...DEFAULT_SWATCHES];
+    localStorage.removeItem('drawdio_swatches');
+  }
+
+  // --- Reference image loader (used by drop hint button) ---
+  function loadRefImageFromPanel() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        const img = new Image();
+        img.onload = () => {
+          if (appState.components.length > 0) {
+            if (!confirm(`Resize canvas to ${img.naturalWidth}×${img.naturalHeight}px?`)) {
+              appState.refImageDataUrl = dataUrl;
+              appState.refImageVisible = true;
+              appState.isDirty = true;
+              return;
+            }
+          }
+          appState.canvasWidth = img.naturalWidth;
+          appState.canvasHeight = img.naturalHeight;
+          appState.refImageDataUrl = dataUrl;
+          appState.refImageVisible = true;
+          appState.isDirty = true;
+        };
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  }
+
+  // --- Panel texture loader ---
+  function loadPanelTexture() {
+    if (!selected) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        selected!.properties.textureDataUrl = reader.result as string;
+        selected!.properties.textureOpacity = selected!.properties.textureOpacity ?? 0.8;
+        selected!.properties.textureOffsetX = 0;
+        selected!.properties.textureOffsetY = 0;
+        selected!.properties.textureScale = 1;
+        selected!.properties.textureBlend = selected!.properties.textureBlend ?? 'multiply';
+        appState.isDirty = true;
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  }
 
   function setProp(path: string, value: unknown) {
     if (!selected) return;
@@ -69,11 +169,12 @@
 
   <CollapsibleSection title="Appearance">
     <div class="color-swatches">
-      {#each COLORS as swatch}
+      {#each swatches as swatch}
         <div
           class="color-swatch"
           class:active={selected.color === swatch}
           style="background: {swatch};"
+          title={swatch}
           onclick={() => { selected.color = swatch; appState.isDirty = true; }}
           role="button"
           tabindex="0"
@@ -85,7 +186,25 @@
       <span class="props-label">Hex</span>
       <input class="props-input" type="text" value={selected.color}
              oninput={(e) => { selected.color = (e.target as HTMLInputElement).value; appState.isDirty = true; }} />
+      <div class="props-color-well" style="background:{selected.color}"
+           title="Open color picker"
+           onclick={openPicker}
+           role="button" tabindex="0"
+           onkeydown={(e) => { if (e.key === 'Enter') openPicker(e as unknown as MouseEvent); }}
+      ></div>
     </div>
+    {#if pickerOpen}
+      <ColorPicker
+        color={selected.color}
+        x={pickerX}
+        y={pickerY}
+        {swatches}
+        onchange={(hex) => { selected.color = hex; appState.isDirty = true; }}
+        onswatchsave={saveSwatch}
+        onreset={resetSwatches}
+        onclose={() => pickerOpen = false}
+      />
+    {/if}
   </CollapsibleSection>
 
   {#if entry.editableProperties.length > 0}
@@ -111,8 +230,104 @@
     </CollapsibleSection>
   {/if}
   <EffectsEditor data={selected} />
+
+  <!-- Panel texture fill — only for panel_group -->
+  {#if selected.type === 'panel_group'}
+    <CollapsibleSection title="Image Fill" collapsed={!selected.properties.textureDataUrl}>
+      {#if selected.properties.textureDataUrl}
+        <img class="ref-thumb" src={selected.properties.textureDataUrl as string} alt="Texture" />
+        <div class="props-row">
+          <span class="props-label">Opacity</span>
+          <input type="range" min="0" max="1" step="0.05"
+                 value={(selected.properties.textureOpacity as number) ?? 0.8}
+                 oninput={(e) => { selected.properties.textureOpacity = +(e.target as HTMLInputElement).value; appState.isDirty = true; }} />
+          <span class="props-value">{Math.round(((selected.properties.textureOpacity as number) ?? 0.8) * 100)}%</span>
+        </div>
+        <div class="props-row">
+          <span class="props-label">Offset X</span>
+          <input class="props-input props-input-sm" type="number"
+                 value={(selected.properties.textureOffsetX as number) ?? 0}
+                 oninput={(e) => { selected.properties.textureOffsetX = +(e.target as HTMLInputElement).value; appState.isDirty = true; }} />
+          <span class="props-label">Y</span>
+          <input class="props-input props-input-sm" type="number"
+                 value={(selected.properties.textureOffsetY as number) ?? 0}
+                 oninput={(e) => { selected.properties.textureOffsetY = +(e.target as HTMLInputElement).value; appState.isDirty = true; }} />
+        </div>
+        <div class="props-row">
+          <span class="props-label">Scale</span>
+          <input class="props-input props-input-sm" type="number"
+                 min="0.1" max="10" step="0.1"
+                 value={(selected.properties.textureScale as number) ?? 1}
+                 oninput={(e) => { selected.properties.textureScale = +(e.target as HTMLInputElement).value; appState.isDirty = true; }} />
+        </div>
+        <div class="props-row">
+          <span class="props-label">Blend</span>
+          <select class="toolbar-select" style="flex:1;"
+                  value={(selected.properties.textureBlend as string) || 'multiply'}
+                  onchange={(e) => { selected.properties.textureBlend = (e.target as HTMLSelectElement).value; appState.isDirty = true; }}>
+            <option value="multiply">Multiply</option>
+            <option value="normal">Normal</option>
+            <option value="screen">Screen</option>
+            <option value="overlay">Overlay</option>
+          </select>
+        </div>
+        <div class="props-row">
+          <button class="props-btn" onclick={loadPanelTexture}>Replace…</button>
+          <button class="props-btn-danger"
+                  onclick={() => { delete selected.properties.textureDataUrl; appState.isDirty = true; }}>
+            Remove
+          </button>
+        </div>
+      {:else}
+        <div class="props-row">
+          <button class="props-btn" style="flex:1;" onclick={loadPanelTexture}>Load Texture…</button>
+        </div>
+      {/if}
+    </CollapsibleSection>
+  {/if}
+
 {:else if getSelectedComponents().length > 1}
-  <div style="padding: 8px; color: #888; font-size: 11px;">
+  <div style="padding: 8px; color: var(--text-muted); font-size: 11px;">
     {getSelectedComponents().length} components selected
   </div>
+{:else}
+  <!-- Canvas properties (nothing selected) -->
+  <CollapsibleSection title="Canvas">
+    <div class="props-row">
+      <span class="props-label">BG</span>
+      <input class="props-input" type="text" value={appState.bgColor}
+             oninput={(e) => { appState.bgColor = (e.target as HTMLInputElement).value; appState.isDirty = true; }} />
+      <div class="props-color-well" style="background:{appState.bgColor}"
+           title="Canvas background color"
+           role="presentation"></div>
+    </div>
+  </CollapsibleSection>
+
+  {#if appState.refImageDataUrl}
+    <CollapsibleSection title="Reference Image">
+      <img class="ref-thumb" src={appState.refImageDataUrl} alt="Reference" />
+      <div class="props-row">
+        <span class="props-label">Opacity</span>
+        <input type="range" min="0.05" max="1" step="0.05"
+               value={appState.refImageOpacity}
+               oninput={(e) => { appState.refImageOpacity = +(e.target as HTMLInputElement).value; }} />
+        <span class="props-value">{Math.round(appState.refImageOpacity * 100)}%</span>
+      </div>
+      <div class="props-row">
+        <button class="props-btn"
+                onclick={() => { appState.refImageVisible = !appState.refImageVisible; }}>
+          {appState.refImageVisible ? 'Hide' : 'Show'}
+        </button>
+        <button class="props-btn-danger"
+                onclick={() => { appState.refImageDataUrl = null; appState.isDirty = true; }}>
+          Remove
+        </button>
+      </div>
+    </CollapsibleSection>
+  {:else}
+    <div class="ref-image-drop-hint">
+      Drop an image onto the canvas<br/>or
+      <button onclick={loadRefImageFromPanel}>Load Reference Image…</button>
+    </div>
+  {/if}
 {/if}

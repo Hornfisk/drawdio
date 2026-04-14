@@ -13,6 +13,9 @@ export function exportPNG(scale = 1, transparent = false) {
   clone.setAttribute('width', String(w * scale));
   clone.setAttribute('height', String(h * scale));
 
+  // Remove reference image (design reference only, never exported)
+  clone.getElementById('ref-image')?.remove();
+
   // Remove selection layer
   const selLayer = clone.querySelector('#selection-layer');
   if (selLayer) {
@@ -66,6 +69,9 @@ export function exportSVG() {
   clone.setAttribute('width', String(w));
   clone.setAttribute('height', String(h));
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+  // Remove reference image (design reference only, never exported)
+  clone.getElementById('ref-image')?.remove();
 
   const selLayer = clone.querySelector('#selection-layer');
   if (selLayer) {

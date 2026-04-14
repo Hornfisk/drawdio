@@ -1,10 +1,5 @@
 import type { ComponentData, Group } from '../components/types.js';
 
-export const COLORS = [
-  '#4fc3f7', '#f06292', '#66bb6a', '#ffa726',
-  '#ef5350', '#ffee58', '#ab47bc', '#ffffff', '#888888'
-];
-
 export interface UserAsset {
   id: string;
   name: string;
@@ -35,4 +30,7 @@ export const appState = $state({
   theme: 'dark' as 'dark' | 'light',
   userAssets: [] as UserAsset[],
   showShortcutsHelp: false,
+  refImageDataUrl: null as string | null,
+  refImageOpacity: 0.5,
+  refImageVisible: true,
 });

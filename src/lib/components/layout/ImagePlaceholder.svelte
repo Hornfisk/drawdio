@@ -8,13 +8,9 @@
 
 <g>
   {#if imageDataUrl}
-    <!-- Render embedded user asset -->
     <image href={imageDataUrl} x="0" y="0"
            width={data.width} height={data.height}
            preserveAspectRatio="xMidYMid meet" />
-    <!-- Subtle border to show bounds -->
-    <rect x="0" y="0" width={data.width} height={data.height}
-          rx="2" fill="none" stroke={data.color} stroke-width="0.5" stroke-opacity="0.4"/>
   {:else}
     <!-- Empty placeholder: dashed outline + cross + label -->
     <rect x="0" y="0" width={data.width} height={data.height}

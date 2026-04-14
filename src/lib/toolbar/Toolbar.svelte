@@ -23,6 +23,40 @@
     menuOpen = !menuOpen;
   }
 
+  function loadRefImageFromMenu() {
+    closeMenu();
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        const img = new Image();
+        img.onload = () => {
+          if (appState.components.length > 0) {
+            if (!confirm(`Resize canvas to ${img.naturalWidth}×${img.naturalHeight}px?`)) {
+              appState.refImageDataUrl = dataUrl;
+              appState.refImageVisible = true;
+              appState.isDirty = true;
+              return;
+            }
+          }
+          appState.canvasWidth = img.naturalWidth;
+          appState.canvasHeight = img.naturalHeight;
+          appState.refImageDataUrl = dataUrl;
+          appState.refImageVisible = true;
+          appState.isDirty = true;
+        };
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  }
+
   // Close on outside click
   $effect(() => {
     const handler = () => closeMenu();
@@ -66,6 +100,11 @@
              onclick={() => { closeMenu(); saveAs(); }}
              onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenu(); saveAs(); } }}>
           <span>Save As...</span>
+        </div>
+        <div class="toolbar-dropdown-item" role="button" tabindex="0"
+             onclick={loadRefImageFromMenu}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') loadRefImageFromMenu(); }}>
+          <span>Load Reference Image…</span>
         </div>
 
         <div class="toolbar-dropdown-sep"></div>
@@ -178,20 +217,20 @@
     <button
       class="toolbar-btn"
       class:active={appState.tooltipsEnabled}
-      onclick={() => appState.tooltipsEnabled = !appState.tooltipsEnabled}
       title="Show component tips"
+      onclick={() => appState.tooltipsEnabled = !appState.tooltipsEnabled}
     >Tips</button>
     <button
       class="toolbar-btn"
       class:active={appState.snapEnabled}
-      onclick={() => appState.snapEnabled = !appState.snapEnabled}
       title="Snap to grid"
+      onclick={() => appState.snapEnabled = !appState.snapEnabled}
     >Snap</button>
     <button
       class="toolbar-btn"
       class:active={appState.gridVisible}
-      onclick={() => appState.gridVisible = !appState.gridVisible}
       title="Toggle grid (G)"
+      onclick={() => appState.gridVisible = !appState.gridVisible}
     >Grid</button>
     <label class="toolbar-info toolbar-step-label" for="toolbar-rot-step" title="Rotation step for [ ] keys (Shift: always ±45°)">°step</label>
     <input

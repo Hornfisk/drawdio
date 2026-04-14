@@ -23,6 +23,26 @@
     if (meta) meta.setAttribute('content', appState.theme);
   });
 
+  let leftPanelWidth = $state(180);
+  const LEFT_MIN = 120;
+  const LEFT_MAX = 400;
+
+  function onResizeMouseDown(e: MouseEvent) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = leftPanelWidth;
+
+    function onMove(me: MouseEvent) {
+      leftPanelWidth = Math.min(LEFT_MAX, Math.max(LEFT_MIN, startW + me.clientX - startX));
+    }
+    function onUp() {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
   onMount(() => {
     const cleanupShortcuts = initShortcuts();
     const cleanupAutoSave = startAutoSave();
@@ -36,9 +56,11 @@
 <!-- App body -->
 <div id="app-layout">
   <!-- Left panel (palette) -->
-  <div class="left-panel">
+  <div class="left-panel" style="width: {leftPanelWidth}px;">
     <Palette />
-    <div class="panel-resize-handle"></div>
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+    <div class="panel-resize-handle" role="separator" aria-label="Resize panel"
+         onmousedown={onResizeMouseDown}></div>
   </div>
 
   <!-- Canvas -->
