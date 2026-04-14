@@ -40,6 +40,8 @@
     ]},
   ];
 
+  let dialogEl = $state<HTMLDivElement | undefined>(undefined);
+
   function close() {
     appState.showShortcutsHelp = false;
   }
@@ -47,15 +49,23 @@
   function onKeyDown(e: KeyboardEvent) {
     if (e.key === 'Escape') close();
   }
+
+  $effect(() => {
+    if (appState.showShortcutsHelp && dialogEl) {
+      dialogEl.focus();
+    }
+  });
 </script>
 
 {#if appState.showShortcutsHelp}
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <div class="shortcuts-backdrop" onclick={close} role="presentation"></div>
   <div class="shortcuts-dialog"
+       bind:this={dialogEl}
        role="dialog"
        aria-label="Keyboard shortcuts"
        aria-modal="true"
+       tabindex="-1"
        onkeydown={onKeyDown}>
     <div class="shortcuts-header">
       <span class="shortcuts-title">Keyboard Shortcuts</span>
