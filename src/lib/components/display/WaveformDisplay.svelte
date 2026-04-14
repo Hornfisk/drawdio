@@ -6,7 +6,7 @@
 <g>
   <!-- Background -->
   <rect x="0" y="0" width={data.width} height={data.height}
-        rx="3" fill="#0a0a1a" stroke="#333" stroke-width="0.5" />
+        rx="3" style="fill: var(--component-bg);" stroke="#333" stroke-width="0.5" />
   <!-- Waveform scales with viewBox — always fills the bounds -->
   <svg x="2" y="2" width={data.width - 4} height={data.height - 4}
        viewBox="0 0 100 100" preserveAspectRatio="none" overflow="hidden">

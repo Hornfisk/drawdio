@@ -19,7 +19,7 @@
 <g>
   <!-- Background -->
   <rect x="0" y="0" width={data.width} height={data.height}
-        rx="3" fill="#141416" stroke="#2a2a3a" stroke-width="0.5"/>
+        rx="3" style="fill: var(--component-bg);" stroke="#2a2a3a" stroke-width="0.5"/>
 
   {#each Array(rows) as _, row}
     {#each Array(cols) as _, col}
@@ -28,9 +28,7 @@
       {@const cx = col * (cellW + gap)}
       {@const cy = row * (cellH + gap)}
       <rect x={cx} y={cy} width={cellW} height={cellH} rx="2"
-            fill={active ? ((data.properties.activeColor as string) || data.color) : '#2a2a3a'}
-            stroke={active ? data.color : '#3a3a4a'}
-            stroke-width="0.5"
+            style="fill: {active ? ((data.properties.activeColor as string) || data.color) : 'var(--component-inactive)'}; stroke: {active ? data.color : 'var(--component-bg-alt)'}; stroke-width: 0.5;"
             data-cell={key} />
     {/each}
   {/each}
