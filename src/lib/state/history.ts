@@ -13,8 +13,8 @@ let redoStack: Snapshot[] = [];
 
 function takeSnapshot(): Snapshot {
   return {
-    components: structuredClone(appState.components),
-    groups: structuredClone(appState.groups),
+    components: JSON.parse(JSON.stringify(appState.components)),
+    groups: JSON.parse(JSON.stringify(appState.groups)),
     selectedIds: [...appState.selectedIds],
   };
 }
