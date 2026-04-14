@@ -5,11 +5,16 @@
   import type { RegistryEntry } from '../components/registry.js';
   import { createComponent } from '../state/actions.js';
   import { select } from '../state/selection.js';
-  import { snap } from '../utils/geometry.js';
+  import PaletteIcon from './PaletteIcon.svelte';
+  import { BUILTIN_KNOBS } from '../components/builtin-knobs.js';
+  import type { BuiltinKnob } from '../components/builtin-knobs.js';
+  import { BUILTIN_TEXTURES } from '../components/builtin-textures.js';
+  import type { BuiltinTexture } from '../components/builtin-textures.js';
+  import { createDragHandler } from '../utils/drag-to-canvas.js';
+  import { fetchAssetAsDataUrl } from '../utils/fetch-asset.js';
 
   let searchQuery = $state('');
   let collapsedCats = $state(new Set<string>());
-  // variantGroup → currently active type
   let activeVariants = $state(new Map<string, string>());
 
   const categories = $derived(entriesByCategory());
@@ -21,7 +26,6 @@
     variants?: { type: string; label: string }[];
   }
 
-  // Build display list: collapse items sharing variantGroup into one row with tabs
   const filteredCategories = $derived.by(() => {
     const q = searchQuery.toLowerCase();
     const result = new Map<string, DisplayItem[]>();
@@ -42,13 +46,9 @@
         if (vg) {
           if (seen.has(vg)) continue;
           seen.add(vg);
-          // Collect all variants for this group from full unfiltered list
           const allVariants = (categories.get(cat) || []).filter(i => i.entry.variantGroup === vg);
           const variants = allVariants.map(v => ({ type: v.type, label: v.entry.variantLabel || v.entry.displayName }));
-          // Ensure active variant is initialised
-          if (!activeVariants.has(vg)) {
-            activeVariants.set(vg, allVariants[0].type);
-          }
+          if (!activeVariants.has(vg)) activeVariants.set(vg, allVariants[0].type);
           const activeType = activeVariants.get(vg)!;
           const activeItem = allVariants.find(v => v.type === activeType) || allVariants[0];
           display.push({ type: activeItem.type, entry: activeItem.entry, variants });
@@ -66,83 +66,130 @@
     activeVariants = new Map(activeVariants).set(group, type);
   }
 
-  // Drag-to-canvas state
-  let dragGhost: HTMLDivElement | null = null;
-  let dragType: string | null = null;
-  let dragStartX = 0;
-  let dragStartY = 0;
-  const DRAG_THRESHOLD = 4;
-
-  function onItemMouseDown(e: MouseEvent, type: string) {
-    dragType = type;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
-
-    function onMouseMove(me: MouseEvent) {
-      const dist = Math.abs(me.clientX - dragStartX) + Math.abs(me.clientY - dragStartY);
-      if (dist > DRAG_THRESHOLD && !dragGhost && dragType) {
-        const entry = categories.get('Controls')?.find(i => i.type === dragType)
-          || categories.get('Display')?.find(i => i.type === dragType)
-          || categories.get('Layout')?.find(i => i.type === dragType);
-        if (entry) {
-          dragGhost = document.createElement('div');
-          dragGhost.className = 'palette-drag-ghost';
-          dragGhost.textContent = entry.entry.displayName;
-          document.body.appendChild(dragGhost);
-        }
-      }
-      if (dragGhost) {
-        dragGhost.style.left = me.clientX + 12 + 'px';
-        dragGhost.style.top = me.clientY - 12 + 'px';
-        document.body.style.cursor = 'grabbing';
-      }
-    }
-
-    function onMouseUp(me: MouseEvent) {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      document.body.style.cursor = '';
-
-      if (dragGhost) {
-        dragGhost.remove();
-        dragGhost = null;
-
-        // Check if dropped on canvas
-        const canvasContainer = document.querySelector('.canvas-container');
-        const svgEl = canvasContainer?.querySelector('svg');
-        if (canvasContainer && svgEl) {
-          const rect = canvasContainer.getBoundingClientRect();
-          if (me.clientX >= rect.left && me.clientX <= rect.right &&
-              me.clientY >= rect.top && me.clientY <= rect.bottom) {
-            const ctm = svgEl.getScreenCTM();
-            if (ctm && dragType) {
-              const inv = ctm.inverse();
-              const cx = inv.a * me.clientX + inv.c * me.clientY + inv.e;
-              const cy = inv.b * me.clientX + inv.d * me.clientY + inv.f;
-              const snapped = snap(cx, cy);
-              const comp = createComponent(dragType, snapped.x, snapped.y);
-              if (comp) select(comp.id);
-            }
-          }
-        }
-      } else if (dragType) {
-        // Click-to-place mode
-        appState.placingType = dragType;
-      }
-
-      dragType = null;
-    }
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    e.preventDefault();
-  }
-
   function toggleCategory(cat: string) {
     const next = new Set(collapsedCats);
     if (next.has(cat)) next.delete(cat);
     else next.add(cat);
     collapsedCats = next;
+  }
+
+  // ---- Component items ----
+  let knobLibExpanded = $state(false);
+  let seqLibExpanded = $state(false);
+
+  function onItemMouseDown(e: MouseEvent, type: string) {
+    const entry =
+      categories.get('Controls')?.find(i => i.type === type) ||
+      categories.get('Display')?.find(i => i.type === type) ||
+      categories.get('Layout')?.find(i => i.type === type);
+    const label = entry?.entry.displayName ?? type;
+
+    createDragHandler({
+      label,
+      onDrop(cx, cy) {
+        const comp = createComponent(type, cx, cy);
+        if (comp) select(comp.id);
+      },
+      onClick() {
+        appState.placingType = type;
+      },
+    })(e);
+  }
+
+  // ---- Builtin knobs ----
+  function onKnobMouseDown(e: MouseEvent, knob: BuiltinKnob) {
+    createDragHandler({
+      label: knob.name,
+      async onDrop(cx, cy) {
+        try {
+          const dataUrl = await fetchAssetAsDataUrl(knob.src);
+          const comp = createComponent('image_placeholder', cx, cy);
+          if (comp) {
+            comp.width = 80; comp.height = 80;
+            comp.properties.imageDataUrl = dataUrl;
+            comp.properties.imageName = knob.name;
+            comp.label = knob.name;
+            select(comp.id);
+          }
+        } catch (err) {
+          console.error('Failed to load knob:', err);
+        }
+      },
+      async onClick() {
+        try {
+          const dataUrl = await fetchAssetAsDataUrl(knob.src);
+          const comp = createComponent('image_placeholder',
+            appState.canvasWidth / 2 - 40,
+            appState.canvasHeight / 2 - 40);
+          if (comp) {
+            comp.width = 80; comp.height = 80;
+            comp.properties.imageDataUrl = dataUrl;
+            comp.properties.imageName = knob.name;
+            comp.label = knob.name;
+            select(comp.id);
+          }
+        } catch (err) {
+          console.error('Failed to load knob:', err);
+        }
+      },
+    })(e);
+  }
+
+  // ---- Builtin textures ----
+  let texturesCollapsed = $state(true);
+
+  function applyTextureToSelectedPanel(dataUrl: string, name: string): boolean {
+    if (appState.selectedIds.length !== 1) return false;
+    const comp = appState.components.find(c => c.id === appState.selectedIds[0]);
+    if (!comp || comp.type !== 'panel_group') return false;
+    comp.properties.textureDataUrl = dataUrl;
+    comp.properties.textureOpacity = comp.properties.textureOpacity ?? 0.8;
+    comp.properties.textureOffsetX = 0;
+    comp.properties.textureOffsetY = 0;
+    comp.properties.textureScale = 1;
+    comp.properties.textureBlend = comp.properties.textureBlend ?? 'multiply';
+    appState.isDirty = true;
+    return true;
+  }
+
+  function onTextureMouseDown(e: MouseEvent, tex: BuiltinTexture) {
+    createDragHandler({
+      label: tex.name,
+      async onDrop(cx, cy) {
+        try {
+          const dataUrl = await fetchAssetAsDataUrl(tex.src);
+          if (!applyTextureToSelectedPanel(dataUrl, tex.name)) {
+            const comp = createComponent('image_placeholder', cx, cy);
+            if (comp) {
+              comp.properties.imageDataUrl = dataUrl;
+              comp.properties.imageName = tex.name;
+              comp.label = tex.name;
+              select(comp.id);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load texture:', err);
+        }
+      },
+      async onClick() {
+        try {
+          const dataUrl = await fetchAssetAsDataUrl(tex.src);
+          if (!applyTextureToSelectedPanel(dataUrl, tex.name)) {
+            const comp = createComponent('image_placeholder',
+              appState.canvasWidth / 2,
+              appState.canvasHeight / 2);
+            if (comp) {
+              comp.properties.imageDataUrl = dataUrl;
+              comp.properties.imageName = tex.name;
+              comp.label = tex.name;
+              select(comp.id);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load texture:', err);
+        }
+      },
+    })(e);
   }
 
   // ---- User assets ----
@@ -176,62 +223,19 @@
   }
 
   function onAssetMouseDown(e: MouseEvent, asset: UserAsset) {
-    dragType = `__asset__${asset.id}`;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
-
-    function onMouseMove(me: MouseEvent) {
-      const dist = Math.abs(me.clientX - dragStartX) + Math.abs(me.clientY - dragStartY);
-      if (dist > DRAG_THRESHOLD && !dragGhost && dragType) {
-        dragGhost = document.createElement('div');
-        dragGhost.className = 'palette-drag-ghost';
-        dragGhost.textContent = asset.name;
-        document.body.appendChild(dragGhost);
-      }
-      if (dragGhost) {
-        dragGhost.style.left = me.clientX + 12 + 'px';
-        dragGhost.style.top = me.clientY - 12 + 'px';
-        document.body.style.cursor = 'grabbing';
-      }
-    }
-
-    function onMouseUp(me: MouseEvent) {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      document.body.style.cursor = '';
-
-      if (dragGhost) {
-        dragGhost.remove();
-        dragGhost = null;
-        const canvasContainer = document.querySelector('.canvas-container');
-        const svgEl = canvasContainer?.querySelector('svg');
-        if (canvasContainer && svgEl) {
-          const rect = canvasContainer.getBoundingClientRect();
-          if (me.clientX >= rect.left && me.clientX <= rect.right &&
-              me.clientY >= rect.top && me.clientY <= rect.bottom) {
-            const ctm = svgEl.getScreenCTM();
-            if (ctm) {
-              const inv = ctm.inverse();
-              const cx = inv.a * me.clientX + inv.c * me.clientY + inv.e;
-              const cy = inv.b * me.clientX + inv.d * me.clientY + inv.f;
-              const snapped = snap(cx, cy);
-              const comp = createComponent('image_placeholder', snapped.x, snapped.y);
-              if (comp) {
-                comp.properties.imageDataUrl = asset.dataUrl;
-                comp.properties.imageName = asset.name;
-                comp.label = asset.name;
-                select(comp.id);
-              }
-            }
-          }
+    createDragHandler({
+      label: asset.name,
+      onDrop(cx, cy) {
+        const comp = createComponent('image_placeholder', cx, cy);
+        if (comp) {
+          comp.properties.imageDataUrl = asset.dataUrl;
+          comp.properties.imageName = asset.name;
+          comp.label = asset.name;
+          select(comp.id);
         }
-      }
-      dragType = null;
-    }
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    e.preventDefault();
+      },
+      // Assets don't support click-to-place
+    })(e);
   }
 </script>
 
@@ -359,11 +363,55 @@
               </svg>
             </div>
             <span class="palette-label">{item.entry.displayName}</span>
+            {#if item.type === 'rotary_knob'}
+              <button class="palette-lib-arrow"
+                      class:open={knobLibExpanded}
+                      onmousedown={(e) => e.stopPropagation()}
+                      onclick={(e) => { e.stopPropagation(); knobLibExpanded = !knobLibExpanded; }}
+                      title="Knob photo library">▾</button>
+            {/if}
           </div>
+          {#if item.type === 'rotary_knob' && knobLibExpanded}
+            <div class="palette-knobs-grid palette-knobs-grid-inline">
+              {#each BUILTIN_KNOBS as knob}
+                <div class="palette-knob-item"
+                     title="{knob.name} — drag to canvas or click to place"
+                     onmousedown={(e) => onKnobMouseDown(e, knob)}
+                     role="button" tabindex="0">
+                  <img src={knob.src} alt={knob.name} draggable="false" class="palette-knob-thumb" />
+                  <span class="palette-knob-label">{knob.name}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
         </div>
       {/each}
     </div>
   {/each}
+
+  <!-- ---- Builtin Textures section ---- -->
+  <div class="palette-category">
+    <div class="palette-heading" class:collapsed={texturesCollapsed}
+         onclick={() => texturesCollapsed = !texturesCollapsed}
+         role="button" tabindex="0"
+         onkeydown={(e) => { if (e.key === 'Enter') texturesCollapsed = !texturesCollapsed; }}>
+      Textures
+    </div>
+    {#if !texturesCollapsed}
+      <div class="palette-textures-hint">Click to apply to selected panel, or drag to canvas</div>
+      <div class="palette-knobs-grid">
+        {#each BUILTIN_TEXTURES as tex}
+          <div class="palette-knob-item"
+               title="{tex.name} — click to apply to selected panel, or drag to canvas"
+               onmousedown={(e) => onTextureMouseDown(e, tex)}
+               role="button" tabindex="0">
+            <img src={tex.src} alt={tex.name} draggable="false" class="palette-knob-thumb palette-texture-thumb" />
+            <span class="palette-knob-label">{tex.name}</span>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </div>
 
   <!-- ---- User Assets section ---- -->
   <div class="palette-category">
