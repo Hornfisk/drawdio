@@ -109,6 +109,7 @@
 
   // ---- Builtin knobs ----
   function onKnobMouseDown(e: MouseEvent, knob: BuiltinKnob) {
+    appState.placingType = null;
     createDragHandler({
       label: knob.name,
       async onDrop(cx, cy) {
@@ -164,6 +165,7 @@
   }
 
   function onTextureMouseDown(e: MouseEvent, tex: BuiltinTexture) {
+    appState.placingType = null;
     createDragHandler({
       label: tex.name,
       async onDrop(cx, cy) {
@@ -234,6 +236,7 @@
   }
 
   function onAssetMouseDown(e: MouseEvent, asset: UserAsset) {
+    appState.placingType = null;
     createDragHandler({
       label: asset.name,
       onDrop(cx, cy) {

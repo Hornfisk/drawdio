@@ -8,7 +8,7 @@ export function doCopy() {
   appState.clipboard = [];
   for (const id of appState.selectedIds) {
     const src = appState.components.find(c => c.id === id);
-    if (src) appState.clipboard.push(structuredClone(src));
+    if (src) appState.clipboard.push(JSON.parse(JSON.stringify(src)));
   }
 }
 
@@ -17,7 +17,7 @@ export function doPaste() {
   pushHistory();
   const pastedIds: string[] = [];
   for (const item of appState.clipboard) {
-    const copy: ComponentData = structuredClone(item);
+    const copy: ComponentData = JSON.parse(JSON.stringify(item));
     copy.id = copy.type + '_' + appState.nextId++;
     copy.x += appState.gridSize;
     copy.y += appState.gridSize;
@@ -53,7 +53,7 @@ export function duplicateInPlace(ids: string[]): string[] {
   for (const id of ids) {
     const src = appState.components.find(c => c.id === id);
     if (!src) continue;
-    const copy: ComponentData = structuredClone(src);
+    const copy: ComponentData = JSON.parse(JSON.stringify(src));
     copy.id = copy.type + '_' + appState.nextId++;
     copy.group = null;
     copy.zIndex = appState.components.length;
@@ -70,7 +70,7 @@ export function doDuplicate() {
   for (const id of appState.selectedIds) {
     const src = appState.components.find(c => c.id === id);
     if (!src) continue;
-    const copy: ComponentData = structuredClone(src);
+    const copy: ComponentData = JSON.parse(JSON.stringify(src));
     copy.id = copy.type + '_' + appState.nextId++;
     copy.x += appState.gridSize;
     copy.y += appState.gridSize;

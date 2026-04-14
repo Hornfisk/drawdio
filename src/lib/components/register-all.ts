@@ -34,9 +34,11 @@ export function registerAllComponents(): void {
     displayName: 'Button',
     defaultProps: {
       width: 60, height: 28, color: '#4fc3f7', label: 'Button',
-      properties: {},
+      properties: { cornerRadius: 4 },
     },
-    editableProperties: [],
+    editableProperties: [
+      { key: 'cornerRadius', label: 'Radius', type: 'number', propPath: 'properties.cornerRadius' },
+    ],
   });
 
   register('dropdown', {
