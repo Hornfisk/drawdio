@@ -1,5 +1,6 @@
 <script lang="ts">
   import { appState } from '../state/app.svelte.js';
+  import type { UserAsset } from '../state/app.svelte.js';
   import { entriesByCategory } from '../components/registry.js';
   import type { RegistryEntry } from '../components/registry.js';
   import { createComponent } from '../state/actions.js';
@@ -143,6 +144,95 @@
     else next.add(cat);
     collapsedCats = next;
   }
+
+  // ---- User assets ----
+  let assetsCollapsed = $state(false);
+
+  function addAssets() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/webp,image/svg+xml,image/gif';
+    input.multiple = true;
+    input.onchange = () => {
+      const files = Array.from(input.files || []);
+      for (const file of files) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const asset: UserAsset = {
+            id: `asset_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+            name: file.name.replace(/\.[^.]+$/, ''),
+            dataUrl: reader.result as string,
+          };
+          appState.userAssets = [...appState.userAssets, asset];
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
+  }
+
+  function removeAsset(id: string) {
+    appState.userAssets = appState.userAssets.filter(a => a.id !== id);
+  }
+
+  function onAssetMouseDown(e: MouseEvent, asset: UserAsset) {
+    dragType = `__asset__${asset.id}`;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+
+    function onMouseMove(me: MouseEvent) {
+      const dist = Math.abs(me.clientX - dragStartX) + Math.abs(me.clientY - dragStartY);
+      if (dist > DRAG_THRESHOLD && !dragGhost && dragType) {
+        dragGhost = document.createElement('div');
+        dragGhost.className = 'palette-drag-ghost';
+        dragGhost.textContent = asset.name;
+        document.body.appendChild(dragGhost);
+      }
+      if (dragGhost) {
+        dragGhost.style.left = me.clientX + 12 + 'px';
+        dragGhost.style.top = me.clientY - 12 + 'px';
+        document.body.style.cursor = 'grabbing';
+      }
+    }
+
+    function onMouseUp(me: MouseEvent) {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+
+      if (dragGhost) {
+        dragGhost.remove();
+        dragGhost = null;
+        const canvasContainer = document.querySelector('.canvas-container');
+        const svgEl = canvasContainer?.querySelector('svg');
+        if (canvasContainer && svgEl) {
+          const rect = canvasContainer.getBoundingClientRect();
+          if (me.clientX >= rect.left && me.clientX <= rect.right &&
+              me.clientY >= rect.top && me.clientY <= rect.bottom) {
+            const ctm = svgEl.getScreenCTM();
+            if (ctm) {
+              const inv = ctm.inverse();
+              const cx = inv.a * me.clientX + inv.c * me.clientY + inv.e;
+              const cy = inv.b * me.clientX + inv.d * me.clientY + inv.f;
+              const snapped = snap(cx, cy);
+              const comp = createComponent('image_placeholder', snapped.x, snapped.y);
+              if (comp) {
+                comp.properties.imageDataUrl = asset.dataUrl;
+                comp.properties.imageName = asset.name;
+                comp.label = asset.name;
+                select(comp.id);
+              }
+            }
+          }
+        }
+      }
+      dragType = null;
+    }
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    e.preventDefault();
+  }
 </script>
 
 <div class="palette">
@@ -178,16 +268,16 @@
             <div class="palette-icon">
               <svg width="20" height="20" viewBox="0 0 20 20">
                 {#if item.type === 'rotary_knob'}
-                  <circle cx="10" cy="10" r="8" fill="none" stroke="#4fc3f7" stroke-width="1.5"/>
-                  <line x1="10" y1="10" x2="10" y2="3" stroke="#4fc3f7" stroke-width="1.5" stroke-linecap="round"/>
+                  <circle cx="10" cy="10" r="8" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+                  <line x1="10" y1="10" x2="10" y2="3" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/>
                 {:else if item.type === 'vertical_slider'}
                   <rect x="8.5" y="0" width="3" height="20" rx="1.5" fill="#555"/>
-                  <rect x="4" y="7" width="12" height="5" rx="2" fill="#4fc3f7"/>
+                  <rect x="4" y="7" width="12" height="5" rx="2" fill="var(--accent)"/>
                 {:else if item.type === 'momentary_button'}
-                  <rect x="1" y="3" width="18" height="14" rx="3" fill="#333" stroke="#4fc3f7" stroke-width="1"/>
+                  <rect x="1" y="3" width="18" height="14" rx="3" fill="#333" stroke="var(--accent)" stroke-width="1"/>
                 {:else if item.type === 'toggle_switch'}
                   <rect x="1" y="5" width="18" height="10" rx="5" fill="#333"/>
-                  <circle cx="14" cy="10" r="4" fill="#4fc3f7"/>
+                  <circle cx="14" cy="10" r="4" fill="var(--accent)"/>
                 {:else if item.type === 'dropdown'}
                   <rect x="1" y="4" width="18" height="12" rx="2" fill="#222" stroke="#555" stroke-width="1"/>
                   <path d="M 12 8 L 15 12 L 18 8" fill="none" stroke="#888" stroke-width="1"/>
@@ -195,7 +285,7 @@
                   <rect x="1" y="1" width="18" height="18" rx="1" fill="none" stroke="#555" stroke-width="1"/>
                   <line x1="10" y1="1" x2="10" y2="19" stroke="#333" stroke-width="0.5"/>
                   <line x1="1" y1="10" x2="19" y2="10" stroke="#333" stroke-width="0.5"/>
-                  <circle cx="14" cy="6" r="3" fill="#4fc3f7"/>
+                  <circle cx="14" cy="6" r="3" fill="var(--accent)"/>
                 {:else if item.type === 'midi_keyboard'}
                   <!-- White keys -->
                   <rect x="0" y="4" width="3" height="12" rx="0.5" fill="#e0e0dc" stroke="#555" stroke-width="0.4"/>
@@ -216,19 +306,19 @@
                   <rect x="11" y="1" width="4" height="3" fill="#ef5350" fill-opacity="0.5"/>
                 {:else if item.type === 'waveform_display'}
                   <rect x="0" y="0" width="20" height="20" rx="2" fill="#0a0a1a" stroke="#333" stroke-width="0.5"/>
-                  <path d="M 1 10 Q 4 3 7 10 Q 10 17 13 10 Q 16 3 19 10" fill="none" stroke="#4fc3f7" stroke-width="1.2"/>
+                  <path d="M 1 10 Q 4 3 7 10 Q 10 17 13 10 Q 16 3 19 10" fill="none" stroke="var(--accent)" stroke-width="1.2"/>
                 {:else if item.type === 'spectrum_analyzer'}
                   <rect x="0" y="0" width="20" height="20" rx="2" fill="#0a0a1a" stroke="#333" stroke-width="0.5"/>
-                  <rect x="2" y="12" width="2" height="7" fill="#4fc3f7"/>
-                  <rect x="5.5" y="7" width="2" height="12" fill="#4fc3f7"/>
-                  <rect x="9" y="9" width="2" height="10" fill="#4fc3f7"/>
-                  <rect x="12.5" y="4" width="2" height="15" fill="#4fc3f7"/>
-                  <rect x="16" y="11" width="2" height="8" fill="#4fc3f7"/>
+                  <rect x="2" y="12" width="2" height="7" fill="var(--accent)"/>
+                  <rect x="5.5" y="7" width="2" height="12" fill="var(--accent)"/>
+                  <rect x="9" y="9" width="2" height="10" fill="var(--accent)"/>
+                  <rect x="12.5" y="4" width="2" height="15" fill="var(--accent)"/>
+                  <rect x="16" y="11" width="2" height="8" fill="var(--accent)"/>
                 {:else if item.type === 'step_sequencer'}
-                  <rect x="0" y="4" width="4" height="12" rx="1" fill="#4fc3f7"/>
+                  <rect x="0" y="4" width="4" height="12" rx="1" fill="var(--accent)"/>
                   <rect x="5" y="4" width="4" height="12" rx="1" fill="#2a2a3a" stroke="#444" stroke-width="0.5"/>
-                  <rect x="10" y="4" width="4" height="12" rx="1" fill="#4fc3f7"/>
-                  <rect x="15" y="4" width="4" height="12" rx="1" fill="#4fc3f7"/>
+                  <rect x="10" y="4" width="4" height="12" rx="1" fill="var(--accent)"/>
+                  <rect x="15" y="4" width="4" height="12" rx="1" fill="var(--accent)"/>
                 {:else if item.type === 'acid_step_sequencer'}
                   <rect x="0" y="0" width="20" height="20" rx="1" fill="#0e0e10"/>
                   <rect x="0" y="1" width="4" height="4" rx="0.5" fill="#c42a2a"/>
@@ -250,7 +340,7 @@
                   <circle cx="7.5" cy="7.5" r="2.5" fill="#fff" fill-opacity="0.25"/>
                 {:else if item.type === 'value_readout'}
                   <rect x="0" y="3" width="20" height="14" rx="2" fill="#111" stroke="#333" stroke-width="0.5"/>
-                  <text x="10" y="13" text-anchor="middle" fill="#4fc3f7" font-size="7" font-family="monospace">440Hz</text>
+                  <text x="10" y="13" text-anchor="middle" fill="var(--accent)" font-size="7" font-family="monospace">440Hz</text>
                 {:else if item.type === 'panel_group'}
                   <rect x="0" y="2" width="20" height="16" rx="3" fill="#1a1a2a" fill-opacity="0.6" stroke="#555" stroke-width="1"/>
                   <text x="3" y="14" fill="#888" font-size="6" font-family="system-ui">Panel</text>
@@ -274,4 +364,37 @@
       {/each}
     </div>
   {/each}
+
+  <!-- ---- User Assets section ---- -->
+  <div class="palette-category">
+    <div class="palette-heading" class:collapsed={assetsCollapsed}
+         onclick={() => assetsCollapsed = !assetsCollapsed}
+         role="button" tabindex="0"
+         onkeydown={(e) => { if (e.key === 'Enter') assetsCollapsed = !assetsCollapsed; }}>
+      Assets
+    </div>
+    {#if !assetsCollapsed}
+      <button class="palette-add-assets-btn" onclick={addAssets} title="Add image files (PNG, SVG, JPEG, WebP)">
+        + Add Assets
+      </button>
+      {#if appState.userAssets.length === 0}
+        <div class="palette-assets-hint">Drag PNG, SVG, JPEG or WebP files onto the canvas, or click "+ Add Assets" to import.</div>
+      {/if}
+      {#each appState.userAssets as asset}
+        <div class="palette-item palette-asset-item"
+             onmousedown={(e) => onAssetMouseDown(e, asset)}
+             role="button" tabindex="0">
+          <div class="palette-icon palette-asset-thumb">
+            <img src={asset.dataUrl} alt={asset.name} draggable="false" />
+          </div>
+          <span class="palette-label palette-asset-name" title={asset.name}>{asset.name}</span>
+          <button class="palette-asset-remove" title="Remove asset"
+                  onclick={(e) => { e.stopPropagation(); removeAsset(asset.id); }}
+                  onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); removeAsset(asset.id); } }}>
+            ×
+          </button>
+        </div>
+      {/each}
+    {/if}
+  </div>
 </div>

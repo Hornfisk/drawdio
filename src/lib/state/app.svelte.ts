@@ -5,6 +5,12 @@ export const COLORS = [
   '#ef5350', '#ffee58', '#ab47bc', '#ffffff', '#888888'
 ];
 
+export interface UserAsset {
+  id: string;
+  name: string;
+  dataUrl: string;
+}
+
 export const appState = $state({
   canvasWidth: 900,
   canvasHeight: 600,
@@ -25,4 +31,6 @@ export const appState = $state({
   tooltipsEnabled: true,
   placingType: null as string | null,
   rotationStep: 15,
+  accentColor: '#4fc3f7',
+  userAssets: [] as UserAsset[],
 });

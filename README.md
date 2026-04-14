@@ -53,6 +53,47 @@ Or open `drawdio.html` in any modern browser for the original single-file versio
 | `Space+drag` or middle-click drag | Pan |
 | `Escape` | Clear selection / cancel placement |
 
+## Custom Assets
+
+Bring your own knob graphics, background textures, panel artwork, or any image into the tool in two ways:
+
+### Runtime import (no build step)
+
+1. In the **palette**, scroll to the **Assets** section at the bottom.
+2. Click **+ Add Assets** — a file picker opens.
+3. Select one or more image files. They are read into memory as base64 data URLs and stored in the project file when you save.
+4. Drag an asset from the palette onto the canvas to place it as a scaleable **Image** component. The image fills the component bounds with `meet` aspect-ratio preservation.
+5. To remove an asset from the palette, click the **×** next to its name.
+
+**Supported formats:** PNG · JPEG · WebP · SVG · GIF
+
+**Recommended specs:**
+
+| Format | Best for | Resolution tip |
+|--------|----------|----------------|
+| SVG | Knob artwork, icons, vector panels | Resolution-independent — use SVG whenever possible |
+| PNG | Photos, textures, raster artwork | Export at **2×** the intended display size for crisp results at 2x PNG export |
+| WebP | Photos that need small file size | Same 2× rule as PNG |
+| JPEG | Backgrounds, photographs | Avoid for UI elements with transparency |
+
+- **DPI/PPI** — irrelevant for screen tools; what matters is pixel dimensions. A 200×200 px display slot → provide a 400×400 px image for 2× sharpness.
+- **Background transparency** — use PNG or SVG for assets that need transparent backgrounds. If you have a JPEG with a white background and need transparency, process it externally first (e.g. [remove.bg](https://www.remove.bg), GIMP, or Photoshop).
+- **Upscaling** — Drawdio does not upscale images internally. Use [waifu2x](https://waifu2x.udp.jp) or [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) for AI upscaling before importing.
+
+### Build-time assets (for developers adding fixed assets to the tool itself)
+
+Place images in `src/assets/` and import them in a `.svelte` component:
+
+```ts
+import myKnob from '../assets/my-knob.png';
+// then in SVG: <image href={myKnob} ... />
+```
+
+**Naming conventions for `src/assets/`:**
+- Lowercase, hyphens only: `filter-knob-bg.svg`, `wood-panel.png`
+- Include type hint in name: `bg-` for backgrounds, `icon-` for icons, `knob-` for knob graphics
+- Do **not** store large raster assets in the repo — keep individual files under 500 KB
+
 ## Usage with AI
 
 Export your mockup as PNG (screenshot) or JSON (structured layout), then share it with Claude, ChatGPT, or any AI assistant to guide plugin UI implementation. The JSON format includes exact positions, sizes, types, rotation, and properties for every component.

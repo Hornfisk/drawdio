@@ -2,7 +2,7 @@
    RESET & BASE
    ============================================================ */
 * { margin: 0; padding: 0; box-sizing: border-box; }
-:root { color-scheme: dark; }
+:root { color-scheme: dark; --accent: var(--accent); }
 html, body { height: 100%; overflow: hidden; }
 body {
   font-family: system-ui, -apple-system, sans-serif;
@@ -29,7 +29,7 @@ body {
 .logo {
   font-weight: 700;
   font-size: 15px;
-  color: #4fc3f7;
+  color: var(--accent);
   letter-spacing: 1px;
   margin-right: 16px;
 }
@@ -50,7 +50,7 @@ body {
   font-family: inherit;
 }
 .toolbar-btn:hover { background: #2a2a4a; }
-.toolbar-btn.active { background: #4fc3f7; color: #0d0d1a; border-color: #4fc3f7; }
+.toolbar-btn.active { background: var(--accent); color: #0d0d1a; border-color: var(--accent); }
 .toolbar-select {
   background: #222;
   color: #ccc;
@@ -61,7 +61,7 @@ body {
   font-family: inherit;
   cursor: pointer;
 }
-.toolbar-select:focus { outline: 1px solid #4fc3f7; }
+.toolbar-select:focus { outline: 1px solid var(--accent); }
 .toolbar-input-sm {
   background: #222;
   color: #ccc;
@@ -73,7 +73,7 @@ body {
   width: 36px;
   text-align: center;
 }
-.toolbar-input-sm:focus { outline: 1px solid #4fc3f7; }
+.toolbar-input-sm:focus { outline: 1px solid var(--accent); }
 .toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 .toolbar-info { color: #666; font-size: 11px; font-family: monospace; }
 
@@ -115,7 +115,7 @@ body {
 }
 .panel-resize-handle:hover,
 .panel-resize-handle.active {
-  background: #4fc3f7;
+  background: var(--accent);
   opacity: 0.5;
 }
 .panel-toggle {
@@ -161,7 +161,7 @@ body {
   font-family: inherit;
   margin-bottom: 6px;
 }
-.palette-search:focus { outline: none; border-color: #4fc3f7; }
+.palette-search:focus { outline: none; border-color: var(--accent); }
 .palette-search::placeholder { color: #555; }
 .palette-heading {
   font-size: 10px;
@@ -188,7 +188,7 @@ body {
 .palette-category.collapsed .palette-item { display: none; }
 .palette-drag-ghost {
   position: fixed;
-  background: #4fc3f7;
+  background: var(--accent);
   color: #0d0d1a;
   font-size: 11px;
   font-family: system-ui, -apple-system, sans-serif;
@@ -210,7 +210,7 @@ body {
   transition: background 0.15s;
 }
 .palette-item:hover { background: #2a2a4a; }
-.palette-item.placing { background: #4fc3f7; color: #0d0d1a; }
+.palette-item.placing { background: var(--accent); color: #0d0d1a; }
 .palette-item.placing .palette-icon { border-color: #0d0d1a; }
 .palette-icon {
   width: 28px;
@@ -230,7 +230,24 @@ body {
   font-family: system-ui, sans-serif; line-height: 1.6;
 }
 .palette-variant-tab:hover { border-color: #555; color: #999; }
-.palette-variant-tab.active { background: #1a2a3a; border-color: #4fc3f7; color: #4fc3f7; }
+.palette-variant-tab.active { background: color-mix(in srgb, var(--accent) 12%, #111); border-color: var(--accent); color: var(--accent); }
+.palette-add-assets-btn {
+  display: block; width: calc(100% - 16px); margin: 4px 8px 6px;
+  background: #1e1e2a; color: #aaa; border: 1px dashed #444;
+  border-radius: 4px; padding: 5px 0; font-size: 11px; font-family: inherit;
+  cursor: pointer; text-align: center; transition: border-color 0.15s, color 0.15s;
+}
+.palette-add-assets-btn:hover { border-color: var(--accent); color: var(--accent); }
+.palette-assets-hint { font-size: 10px; color: #444; padding: 2px 8px 6px; line-height: 1.5; }
+.palette-asset-item { position: relative; }
+.palette-asset-thumb { width: 28px; height: 28px; overflow: hidden; border-radius: 2px; border: 1px solid #333; }
+.palette-asset-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.palette-asset-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
+.palette-asset-remove {
+  margin-left: auto; background: none; border: none; color: #555; font-size: 14px;
+  cursor: pointer; padding: 0 2px; line-height: 1; flex-shrink: 0;
+}
+.palette-asset-remove:hover { color: #ef5350; }
 
 /* ============================================================
    RIGHT PANEL (Properties / Layers)
@@ -381,7 +398,7 @@ body {
   font-size: 11px;
   font-family: monospace;
 }
-.props-input:focus { outline: none; border-color: #4fc3f7; }
+.props-input:focus { outline: none; border-color: var(--accent); }
 .props-input-sm {
   width: 48px;
   min-width: 36px;
@@ -511,6 +528,36 @@ body {
   margin: 3px 0;
 }
 .toolbar-dropdown-shortcut { color: #666; font-size: 11px; margin-left: 16px; }
+.toolbar-hamburger { font-size: 16px; padding: 4px 10px; line-height: 1; }
+.toolbar-hamburger-menu { min-width: 220px; }
+.toolbar-menu-section-label {
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  color: #555; padding: 6px 14px 2px; pointer-events: none;
+}
+.toolbar-color-grid {
+  display: flex; gap: 5px; flex-wrap: wrap; padding: 4px 14px 6px;
+}
+.toolbar-color-swatch {
+  width: 20px; height: 20px; border-radius: 4px; cursor: pointer;
+  border: 2px solid transparent; transition: border-color 0.12s, transform 0.12s;
+  flex-shrink: 0;
+}
+.toolbar-color-swatch:hover { border-color: #fff; transform: scale(1.15); }
+.toolbar-color-swatch-active { border-color: #fff !important; box-shadow: 0 0 0 1px #000; }
+.toolbar-color-custom {
+  display: flex; align-items: center; gap: 6px; padding: 2px 14px 8px;
+}
+.toolbar-color-custom-label { font-size: 10px; color: #666; }
+.toolbar-color-hex-input {
+  flex: 1; background: #222; color: #ccc; border: 1px solid #444;
+  border-radius: 3px; padding: 3px 5px; font-size: 11px; font-family: monospace;
+  width: 72px;
+}
+.toolbar-color-native {
+  width: 22px; height: 22px; border: none; border-radius: 3px;
+  cursor: pointer; background: none; padding: 0; flex-shrink: 0;
+}
+.toolbar-step-label { cursor: default; }
 
 /* Auto-save indicator */
 .autosave-dot {
