@@ -36,7 +36,7 @@ export function pushHistory() {
 
 export function undo() {
   if (undoStack.length === 0) return;
-  undoStack.push(takeSnapshot());
+  redoStack.push(takeSnapshot());
   const prev = undoStack.pop();
   if (prev) applySnapshot(prev);
 }
