@@ -57,10 +57,12 @@ npm run build # production build to dist/
 - `src/lib/io/export.ts` — `exportPNG(scale, transparent)`, `exportSVG()`, `copyJSONToClipboard()`.
 - `src/lib/io/autosave.ts` — localStorage auto-save every 30s, restore prompt on load.
 - `src/lib/ui/ColorPicker.svelte` — HSB canvas-based color picker, positioned fixed. Props: `color`, `x`, `y`, `swatches`, `onchange`, `onswatchsave`, `onreset`, `onclose`. Swatches persisted in localStorage under `drawdio_swatches`.
+- `src/lib/ui/ColorField.svelte` — reusable row (hex input + well + eyedropper) used in Appearance, Canvas BG, Gradient, and Toolbar accent. Eyedropper prefers `window.EyeDropper` when available; falls back to a canvas-scoped picker for Brave with fingerprint blocking.
+- `src/lib/ui/eyedropper.svelte.ts` — shared `$state` mode for the canvas-scoped picker. `Canvas.svelte` watches `eyedropperState.active` and, when true, rasterizes the live SVG (via `XMLSerializer` → blob URL → `<img>` → `drawImage` → `getImageData`) and samples the clicked pixel. Data URLs for ref images / user assets avoid CORS taint. Escape / right-click cancels. Note: the eyedropper only *samples* colors — applying the result to a raster asset (imported image, `image_placeholder`) will update `data.color` but has no visible effect since those components don't respect it.
 
 ### Toolbar & UI
 
-- `src/lib/toolbar/Toolbar.svelte` — Single hamburger `☰` menu containing File, Export, Accent Color (8 presets + hex + native picker), and Theme (Dark/Light) sections. Right side has Tips/Snap/Grid toggles and rotation step input.
+- `src/lib/toolbar/Toolbar.svelte` — Single hamburger `☰` menu containing File, Export, Accent Color (8 presets + hex + native picker), and Theme (Dark/Light) sections. Right side has Tips/Snap/Grid toggles.
 - `src/lib/ui/ContextMenu.svelte` — Right-click context menu with full action set.
 
 ## Environment

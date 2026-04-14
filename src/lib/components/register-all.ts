@@ -1,4 +1,11 @@
 import { register } from './registry.js';
+import { FONT_OPTIONS } from './fonts.js';
+
+const ALIGN_OPTIONS = [
+  { value: 'left',   label: 'Left' },
+  { value: 'center', label: 'Center' },
+  { value: 'right',  label: 'Right' },
+];
 
 // Controls
 import MomentaryButton from './controls/MomentaryButton.svelte';
@@ -37,7 +44,7 @@ export function registerAllComponents(): void {
       properties: { cornerRadius: 4 },
     },
     editableProperties: [
-      { key: 'cornerRadius', label: 'Radius', type: 'number', propPath: 'properties.cornerRadius' },
+      { key: 'cornerRadius', label: 'Radius', type: 'number', propPath: 'properties.cornerRadius', min: 0 },
     ],
   });
 
@@ -138,13 +145,14 @@ export function registerAllComponents(): void {
     displayName: 'Label',
     defaultProps: {
       width: 80, height: 20, color: '#ffffff', label: 'Label',
-      properties: { fontSize: 14, bold: false, italic: false, fontFamily: 'system-ui' },
+      properties: { fontSize: 14, bold: false, italic: false, fontFamily: 'system-ui, sans-serif', align: 'left' },
     },
     editableProperties: [
-      { key: 'fontSize', label: 'Size', type: 'number', propPath: 'properties.fontSize' },
+      { key: 'fontSize', label: 'Size', type: 'number', propPath: 'properties.fontSize', min: 1 },
+      { key: 'align', label: 'Align', type: 'select', propPath: 'properties.align', options: ALIGN_OPTIONS },
       { key: 'bold', label: 'Bold', type: 'checkbox', propPath: 'properties.bold' },
       { key: 'italic', label: 'Italic', type: 'checkbox', propPath: 'properties.italic' },
-      { key: 'fontFamily', label: 'Font', type: 'text', propPath: 'properties.fontFamily' },
+      { key: 'fontFamily', label: 'Font', type: 'select', propPath: 'properties.fontFamily', options: FONT_OPTIONS },
     ],
   });
 
@@ -171,7 +179,7 @@ export function registerAllComponents(): void {
     },
     editableProperties: [
       { key: 'orientation', label: 'Dir', type: 'text', propPath: 'properties.orientation' },
-      { key: 'segments', label: 'Segs', type: 'number', propPath: 'properties.segments' },
+      { key: 'segments', label: 'Segs', type: 'number', propPath: 'properties.segments', min: 1 },
     ],
   });
 
@@ -181,12 +189,15 @@ export function registerAllComponents(): void {
     displayName: 'Readout',
     defaultProps: {
       width: 72, height: 24, color: '#4fc3f7', label: '',
-      properties: { value: '440', unit: 'Hz', fontSize: 13 },
+      properties: { value: '440', unit: 'Hz', fontSize: 13, cornerRadius: 3, fontFamily: "'VT323', ui-monospace, monospace", align: 'center' },
     },
     editableProperties: [
       { key: 'value', label: 'Value', type: 'text', propPath: 'properties.value' },
       { key: 'unit', label: 'Unit', type: 'text', propPath: 'properties.unit' },
-      { key: 'fontSize', label: 'Size', type: 'number', propPath: 'properties.fontSize' },
+      { key: 'fontSize', label: 'Size', type: 'number', propPath: 'properties.fontSize', min: 1 },
+      { key: 'cornerRadius', label: 'Corner', type: 'number', propPath: 'properties.cornerRadius', min: 0 },
+      { key: 'align', label: 'Align', type: 'select', propPath: 'properties.align', options: ALIGN_OPTIONS },
+      { key: 'fontFamily', label: 'Font', type: 'select', propPath: 'properties.fontFamily', options: FONT_OPTIONS },
     ],
   });
 
@@ -202,9 +213,9 @@ export function registerAllComponents(): void {
       properties: { rows: 1, columns: 16, cellSize: 24, activeColor: '#4fc3f7', pattern: '' },
     },
     editableProperties: [
-      { key: 'rows', label: 'Rows', type: 'number', propPath: 'properties.rows' },
-      { key: 'columns', label: 'Cols', type: 'number', propPath: 'properties.columns' },
-      { key: 'cellSize', label: 'Cell', type: 'number', propPath: 'properties.cellSize' },
+      { key: 'rows', label: 'Rows', type: 'number', propPath: 'properties.rows', min: 1 },
+      { key: 'columns', label: 'Cols', type: 'number', propPath: 'properties.columns', min: 1 },
+      { key: 'cellSize', label: 'Cell', type: 'number', propPath: 'properties.cellSize', min: 1 },
       { key: 'pattern', label: 'Active', type: 'text', propPath: 'properties.pattern' },
     ],
   });
@@ -225,7 +236,7 @@ export function registerAllComponents(): void {
       properties: { columns: 16, steps: defaultAcidSteps, minNote: 36, maxNote: 60 },
     },
     editableProperties: [
-      { key: 'columns', label: 'Steps', type: 'number', propPath: 'properties.columns' },
+      { key: 'columns', label: 'Steps', type: 'number', propPath: 'properties.columns', min: 1 },
       { key: 'minNote', label: 'Min note', type: 'number', propPath: 'properties.minNote' },
       { key: 'maxNote', label: 'Max note', type: 'number', propPath: 'properties.maxNote' },
     ],
@@ -240,7 +251,7 @@ export function registerAllComponents(): void {
       properties: { bars: 24 },
     },
     editableProperties: [
-      { key: 'bars', label: 'Bars', type: 'number', propPath: 'properties.bars' },
+      { key: 'bars', label: 'Bars', type: 'number', propPath: 'properties.bars', min: 1 },
     ],
   });
 
@@ -263,10 +274,11 @@ export function registerAllComponents(): void {
     displayName: 'Header',
     defaultProps: {
       width: 150, height: 22, color: '#ccc', label: 'SECTION',
-      properties: { fontSize: 12 },
+      properties: { fontSize: 12, align: 'left' },
     },
     editableProperties: [
-      { key: 'fontSize', label: 'Size', type: 'number', propPath: 'properties.fontSize' },
+      { key: 'fontSize', label: 'Size', type: 'number', propPath: 'properties.fontSize', min: 1 },
+      { key: 'align', label: 'Align', type: 'select', propPath: 'properties.align', options: ALIGN_OPTIONS },
     ],
   });
 
@@ -292,8 +304,8 @@ export function registerAllComponents(): void {
     editableProperties: [
       { key: 'bgColor', label: 'BG', type: 'text', propPath: 'properties.bgColor' },
       { key: 'bgOpacity', label: 'Opacity', type: 'number', propPath: 'properties.bgOpacity' },
-      { key: 'cornerRadius', label: 'Radius', type: 'number', propPath: 'properties.cornerRadius' },
-      { key: 'borderWidth', label: 'Border', type: 'number', propPath: 'properties.borderWidth' },
+      { key: 'cornerRadius', label: 'Radius', type: 'number', propPath: 'properties.cornerRadius', min: 0 },
+      { key: 'borderWidth', label: 'Border', type: 'number', propPath: 'properties.borderWidth', min: 0 },
     ],
   });
 
@@ -306,8 +318,13 @@ export function registerAllComponents(): void {
       properties: { orientation: 'horizontal', thickness: 1 },
     },
     editableProperties: [
-      { key: 'orientation', label: 'Dir', type: 'text', propPath: 'properties.orientation' },
-      { key: 'thickness', label: 'Width', type: 'number', propPath: 'properties.thickness' },
+      { key: 'orientation', label: 'Dir', type: 'select', propPath: 'properties.orientation',
+        options: [
+          { value: 'horizontal', label: 'Horizontal' },
+          { value: 'vertical', label: 'Vertical' },
+        ] },
+      { key: 'thickness', label: 'Thickness', type: 'number', propPath: 'properties.thickness',
+        min: 1, max: 40, step: 1 },
     ],
   });
 }

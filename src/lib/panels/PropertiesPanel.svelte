@@ -4,53 +4,13 @@
   import { getEntry } from '../components/registry.js';
   import CollapsibleSection from './CollapsibleSection.svelte';
   import EffectsEditor from './EffectsEditor.svelte';
-  import ColorPicker from '../ui/ColorPicker.svelte';
+  import ColorField from '../ui/ColorField.svelte';
+  import { swatchState } from '../ui/swatches.svelte.js';
 
   const selected = $derived(
     getSelectedComponents().length === 1 ? getSelectedComponents()[0] : null
   );
   const entry = $derived(selected ? getEntry(selected.type) : null);
-
-  // --- Swatch persistence ---
-  const DEFAULT_SWATCHES = ['#4fc3f7', '#f06292', '#66bb6a', '#ffa726', '#ef5350', '#ffee58', '#ab47bc', '#ffffff'];
-
-  function loadSwatches(): string[] {
-    try {
-      const raw = localStorage.getItem('drawdio_swatches');
-      if (raw) {
-        const arr = JSON.parse(raw);
-        if (Array.isArray(arr) && arr.length === 8) return arr;
-      }
-    } catch {}
-    return [...DEFAULT_SWATCHES];
-  }
-
-  let swatches = $state(loadSwatches());
-  let pickerOpen = $state(false);
-  let pickerX = $state(0);
-  let pickerY = $state(0);
-
-  function openPicker(e: MouseEvent) {
-    if (!selected) return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    let px = rect.left;
-    let py = rect.bottom + 6;
-    if (px + 220 > window.innerWidth) px = window.innerWidth - 222;
-    if (py + 310 > window.innerHeight) py = rect.top - 314;
-    pickerX = px;
-    pickerY = py;
-    pickerOpen = true;
-  }
-
-  function saveSwatch(index: number, hex: string) {
-    swatches = swatches.map((s, i) => i === index ? hex : s);
-    localStorage.setItem('drawdio_swatches', JSON.stringify(swatches));
-  }
-
-  function resetSwatches() {
-    swatches = [...DEFAULT_SWATCHES];
-    localStorage.removeItem('drawdio_swatches');
-  }
 
   // --- Reference image loader (used by drop hint button) ---
   function loadRefImageFromPanel() {
@@ -169,7 +129,7 @@
 
   <CollapsibleSection title="Appearance">
     <div class="color-swatches">
-      {#each swatches as swatch}
+      {#each swatchState.list as swatch}
         <div
           class="color-swatch"
           class:active={selected.color === swatch}
@@ -183,28 +143,10 @@
       {/each}
     </div>
     <div class="props-row">
-      <span class="props-label">Hex</span>
-      <input class="props-input" type="text" value={selected.color}
-             oninput={(e) => { selected.color = (e.target as HTMLInputElement).value; appState.isDirty = true; }} />
-      <div class="props-color-well" style="background:{selected.color}"
-           title="Open color picker"
-           onclick={openPicker}
-           role="button" tabindex="0"
-           onkeydown={(e) => { if (e.key === 'Enter') openPicker(e as unknown as MouseEvent); }}
-      ></div>
+      <span class="props-label">Color</span>
+      <ColorField color={selected.color}
+                  onchange={(hex) => { selected.color = hex; appState.isDirty = true; }} />
     </div>
-    {#if pickerOpen}
-      <ColorPicker
-        color={selected.color}
-        x={pickerX}
-        y={pickerY}
-        {swatches}
-        onchange={(hex) => { selected.color = hex; appState.isDirty = true; }}
-        onswatchsave={saveSwatch}
-        onreset={resetSwatches}
-        onclose={() => pickerOpen = false}
-      />
-    {/if}
   </CollapsibleSection>
 
   {#if entry.editableProperties.length > 0}
@@ -219,7 +161,21 @@
             <input class="props-input props-input-sm" type="number"
                    value={getProp(prop.propPath || prop.key) as number}
                    min={prop.min} max={prop.max} step={prop.step}
-                   oninput={(e) => setProp(prop.propPath || prop.key, Number((e.target as HTMLInputElement).value))} />
+                   oninput={(e) => {
+                     let v = Number((e.target as HTMLInputElement).value);
+                     if (prop.min !== undefined && v < prop.min) v = prop.min;
+                     if (prop.max !== undefined && v > prop.max) v = prop.max;
+                     setProp(prop.propPath || prop.key, v);
+                   }} />
+          {:else if prop.type === 'select' && prop.options}
+            <select class="props-input"
+                    value={getProp(prop.propPath || prop.key) as string}
+                    style="font-family: {getProp(prop.propPath || prop.key) as string};"
+                    onchange={(e) => setProp(prop.propPath || prop.key, (e.target as HTMLSelectElement).value)}>
+              {#each prop.options as opt}
+                <option value={opt.value} style="font-family: {opt.value};">{opt.label}</option>
+              {/each}
+            </select>
           {:else}
             <input class="props-input" type="text"
                    value={getProp(prop.propPath || prop.key) as string}
@@ -295,11 +251,8 @@
   <CollapsibleSection title="Canvas">
     <div class="props-row">
       <span class="props-label">BG</span>
-      <input class="props-input" type="text" value={appState.bgColor}
-             oninput={(e) => { appState.bgColor = (e.target as HTMLInputElement).value; appState.isDirty = true; }} />
-      <div class="props-color-well" style="background:{appState.bgColor}"
-           title="Canvas background color"
-           role="presentation"></div>
+      <ColorField color={appState.bgColor}
+                  onchange={(hex) => { appState.bgColor = hex; appState.isDirty = true; }} />
     </div>
   </CollapsibleSection>
 

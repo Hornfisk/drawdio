@@ -6,7 +6,6 @@ import { createGroup, ungroupSelected } from '../state/groups.js';
 import { bringForward, sendBackward, bringToFront, sendToBack } from '../state/zorder.js';
 import { save, openProject } from '../io/serialization.js';
 import { exportPNG, exportSVG, copyJSONToClipboard } from '../io/export.js';
-import { rotateSelectedBy } from '../state/actions.js';
 import { pushHistory } from '../state/history.js';
 import { expandSelection } from '../state/groups.js';
 import { pasteImageAsComponent, setRefImageFromDataUrl } from '../io/refImage.js';
@@ -15,7 +14,15 @@ export function initShortcuts(): () => void {
   function onKeyDown(e: KeyboardEvent) {
     const target = e.target as Element;
     const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
-    if (isInput) return;
+    if (isInput) {
+      // Escape blurs the field and returns focus to the canvas so arrow-nudge works again.
+      if (e.key === 'Escape') {
+        (target as HTMLElement).blur();
+        (document.querySelector('.canvas-container') as HTMLElement | null)?.focus();
+        e.preventDefault();
+      }
+      return;
+    }
 
     const ctrl = e.ctrlKey || e.metaKey;
     const shift = e.shiftKey;
@@ -148,20 +155,6 @@ export function initShortcuts(): () => void {
     // Ctrl+[ — send backward
     if (key === '[' && ctrl) {
       sendBackward(appState.selectedIds);
-      e.preventDefault();
-      return;
-    }
-
-    // ] — rotate +step (Shift: +45°)
-    if (key === ']' && !ctrl) {
-      rotateSelectedBy(shift ? 45 : (appState.rotationStep || 15));
-      e.preventDefault();
-      return;
-    }
-
-    // [ — rotate -step (Shift: -45°)
-    if (key === '[' && !ctrl) {
-      rotateSelectedBy(shift ? -45 : -(appState.rotationStep || 15));
       e.preventDefault();
       return;
     }

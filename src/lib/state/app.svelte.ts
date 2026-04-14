@@ -25,7 +25,6 @@ export const appState = $state({
   fileName: null as string | null,
   tooltipsEnabled: true,
   placingType: null as string | null,
-  rotationStep: 15,
   accentColor: '#4fc3f7',
   theme: 'dark' as 'dark' | 'light',
   userAssets: [] as UserAsset[],

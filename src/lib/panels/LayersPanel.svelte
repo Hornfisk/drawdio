@@ -10,6 +10,8 @@
     [...getSortedComponents()].reverse()
   );
 
+  let collapsed = $state(true);
+
   function toggleVisibility(e: MouseEvent, comp: typeof layerItems[0]) {
     e.stopPropagation();
     comp.visible = comp.visible === false ? true : false;
@@ -27,8 +29,17 @@
   }
 </script>
 
-<div class="layers-panel">
-  <div class="layers-heading">Layers</div>
+<div class="layers-panel" class:collapsed>
+  <div class="layers-heading"
+       class:collapsed
+       onclick={() => collapsed = !collapsed}
+       onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); collapsed = !collapsed; } }}
+       role="button" tabindex="0"
+       aria-expanded={!collapsed}
+       title={collapsed ? 'Show layers' : 'Hide layers'}>
+    Layers <span class="layers-count">({layerItems.length})</span>
+  </div>
+  {#if !collapsed}
   {#each layerItems as comp (comp.id)}
     {@const entry = getEntry(comp.type)}
     <div class="layer-item"
@@ -58,4 +69,5 @@
       </span>
     </div>
   {/each}
+  {/if}
 </div>
