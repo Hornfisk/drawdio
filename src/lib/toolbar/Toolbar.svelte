@@ -39,7 +39,7 @@
   <div class="toolbar-dropdown">
     <button class="toolbar-btn" onclick={toggleFile}>File</button>
     {#if fileMenuOpen}
-      <div class="toolbar-dropdown-menu open" role="menu"
+      <div class="toolbar-dropdown-menu open" role="menu" tabindex="-1"
            onclick={(e: MouseEvent) => e.stopPropagation()}
            onkeydown={(e: KeyboardEvent) => e.stopPropagation()}>
         <div class="toolbar-dropdown-item" role="button" tabindex="0"
@@ -71,7 +71,7 @@
   <div class="toolbar-dropdown">
     <button class="toolbar-btn" onclick={toggleExport}>Export</button>
     {#if exportMenuOpen}
-      <div class="toolbar-dropdown-menu open" role="menu"
+      <div class="toolbar-dropdown-menu open" role="menu" tabindex="-1"
            onclick={(e: MouseEvent) => e.stopPropagation()}
            onkeydown={(e: KeyboardEvent) => e.stopPropagation()}>
         <div class="toolbar-dropdown-item" role="button" tabindex="0"
@@ -154,5 +154,17 @@
       class:active={appState.gridVisible}
       onclick={() => appState.gridVisible = !appState.gridVisible}
     >Grid</button>
+    <span class="toolbar-info" title="Rotation step for [ ] keys">∠</span>
+    <input
+      class="toolbar-input-sm"
+      type="number"
+      min="1" max="180" step="1"
+      title="Rotation step for [ ] keys (Shift: always ±45°)"
+      value={appState.rotationStep}
+      oninput={(e) => {
+        const v = Math.max(1, Math.min(180, Number((e.target as HTMLInputElement).value)));
+        if (!isNaN(v)) appState.rotationStep = v;
+      }}
+    />
   </div>
 </div>

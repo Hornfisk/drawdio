@@ -46,6 +46,23 @@ export function doCut() {
   appState.isDirty = true;
 }
 
+// Duplicate specific IDs in-place (no position offset). Returns new IDs.
+// Caller is responsible for pushHistory() and isDirty.
+export function duplicateInPlace(ids: string[]): string[] {
+  const newIds: string[] = [];
+  for (const id of ids) {
+    const src = appState.components.find(c => c.id === id);
+    if (!src) continue;
+    const copy: ComponentData = JSON.parse(JSON.stringify(src));
+    copy.id = copy.type + '_' + appState.nextId++;
+    copy.group = null;
+    copy.zIndex = appState.components.length;
+    appState.components.push(copy);
+    newIds.push(copy.id);
+  }
+  return newIds;
+}
+
 export function doDuplicate() {
   if (appState.selectedIds.length === 0) return;
   pushHistory();

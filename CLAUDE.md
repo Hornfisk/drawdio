@@ -62,12 +62,21 @@ npm run build # production build to dist/
 - `src/lib/toolbar/Toolbar.svelte` — File/Export dropdown menus, canvas presets, toggle buttons.
 - `src/lib/ui/ContextMenu.svelte` — Right-click context menu with full action set.
 
+## Environment
+
+- **WSL2 + /mnt/c**: Vite's inotify-based watcher doesn't fire on Windows filesystem. `vite.config.ts` has `usePolling: true` — HMR works but requires a one-time restart after changing `vite.config.ts` itself.
+- **Brave Force Dark Mode**: `color-scheme: dark` on `:root` (CSS) + `<meta name="color-scheme" content="dark">` (HTML) prevents colour inversion of the SVG canvas.
+- **Layout root**: `main.ts` mounts into `<div id="app">` from `index.html`. The main layout div in `App.svelte` uses `id="app-layout"` to avoid a duplicate-id CSS collision.
+- **Git push**: SSH key requires `eval "$(ssh-agent -s)" && ssh-add ~/.ssh/id_ed25519` before pushing. Remote is `git@github.com:Hornfisk/drawdio.git`.
+
 ## Key Svelte 5 Patterns
 
 - `$state` for reactive state, `$derived` for computed values, `$props()` for component props, `$effect()` for side effects.
 - Cannot export `$derived` from `.svelte.ts` modules — use regular functions instead.
 - `<svelte:component>` is deprecated — use `{@const Component = expr}` then `<Component />`.
 - Direct mutation of `$state` proxied objects triggers reactive updates (e.g., `comp.x = 100` updates only where `.x` is read).
+- `{@html}` inside `<svg>` does NOT work — Svelte uses HTML parser, not SVG namespace. Use inline `{#if}` template elements directly inside the `<svg>` tag instead.
+- To initialise local state from a prop without Svelte warning: `let x = $state(untrack(() => propVal))` (import `untrack` from `'svelte'`).
 
 ## Save Format
 

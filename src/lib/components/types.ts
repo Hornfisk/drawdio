@@ -30,6 +30,7 @@ export interface ComponentData {
   y: number;
   width: number;
   height: number;
+  rotation: number;
   color: string;
   label: string;
   properties: Record<string, unknown>;

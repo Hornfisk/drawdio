@@ -6,6 +6,7 @@ import { createGroup, ungroupSelected } from '../state/groups.js';
 import { bringForward, sendBackward, bringToFront, sendToBack } from '../state/zorder.js';
 import { save } from '../io/serialization.js';
 import { exportPNG, exportSVG, copyJSONToClipboard } from '../io/export.js';
+import { rotateSelectedBy } from '../state/actions.js';
 
 export function initShortcuts(): () => void {
   function onKeyDown(e: KeyboardEvent) {
@@ -126,6 +127,20 @@ export function initShortcuts(): () => void {
     // Ctrl+[ — send backward
     if (key === '[' && ctrl) {
       sendBackward(appState.selectedIds);
+      e.preventDefault();
+      return;
+    }
+
+    // ] — rotate +step (Shift: +45°)
+    if (key === ']' && !ctrl) {
+      rotateSelectedBy(shift ? 45 : (appState.rotationStep || 15));
+      e.preventDefault();
+      return;
+    }
+
+    // [ — rotate -step (Shift: -45°)
+    if (key === '[' && !ctrl) {
+      rotateSelectedBy(shift ? -45 : -(appState.rotationStep || 15));
       e.preventDefault();
       return;
     }

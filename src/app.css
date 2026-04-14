@@ -62,6 +62,18 @@ body {
   cursor: pointer;
 }
 .toolbar-select:focus { outline: 1px solid #4fc3f7; }
+.toolbar-input-sm {
+  background: #222;
+  color: #ccc;
+  border: 1px solid #2a2a4a;
+  padding: 4px 4px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+  width: 36px;
+  text-align: center;
+}
+.toolbar-input-sm:focus { outline: 1px solid #4fc3f7; }
 .toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 .toolbar-info { color: #666; font-size: 11px; font-family: monospace; }
 

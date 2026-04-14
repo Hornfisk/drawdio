@@ -1,6 +1,7 @@
 <script lang="ts">
   import { appState } from '../state/app.svelte.js';
   import { getSelectedComponents } from '../state/derived.svelte.js';
+  import { getActiveRotation } from '../interaction/drag.svelte.js';
 
   const hs = 6; // handle size
 
@@ -23,24 +24,74 @@
       { x: -hs / 2 - 2, y: h / 2 - hs / 2, cursor: 'ew-resize', pos: 'ml' },
     ];
   }
+
+  const activeRotation = $derived(getActiveRotation());
 </script>
 
 {#each getSelectedComponents() as comp (comp.id)}
+  {@const rot = comp.rotation || 0}
+  {@const isRotated = rot !== 0}
   <g data-selection-for={comp.id}
-     transform="translate({comp.x}, {comp.y})">
+     transform="translate({comp.x}, {comp.y}) rotate({rot}, {comp.width / 2}, {comp.height / 2})">
+
     <!-- Dashed border -->
     <rect x="-2" y="-2"
           width={comp.width + 4} height={comp.height + 4}
           fill="none" stroke="#4fc3f7" stroke-width="0.8"
           stroke-dasharray="4,3" />
 
-    <!-- 8 resize handles -->
-    {#each getHandles(comp.width, comp.height) as handle}
-      <rect x={handle.x} y={handle.y}
-            width={hs} height={hs}
-            fill="#4fc3f7" stroke="#0d0d1a" stroke-width="1"
-            data-handle={handle.pos} rx="1"
-            style="cursor: {handle.cursor};" />
-    {/each}
+    <!-- Resize handles — hidden when component is rotated -->
+    {#if !isRotated}
+      {#each getHandles(comp.width, comp.height) as handle}
+        {@const isCorner = (handle.pos === 'tl' || handle.pos === 'tr' || handle.pos === 'br' || handle.pos === 'bl')}
+        <rect x={handle.x} y={handle.y}
+              width={hs} height={hs}
+              fill="#4fc3f7" stroke="#0d0d1a" stroke-width="1"
+              data-handle={handle.pos} rx="1"
+              style="cursor: {handle.cursor};">
+          {#if appState.tooltipsEnabled}
+            <title>{isCorner ? 'Drag to resize · Shift: lock ratio' : 'Drag to resize'}</title>
+          {/if}
+        </rect>
+      {/each}
+    {/if}
+    {#if isRotated && appState.tooltipsEnabled}
+      <!-- Hint that resize is available at 0° -->
+      <text x={comp.width / 2} y={comp.height + 14} text-anchor="middle"
+            fill="#666" font-size="8" font-family="system-ui"
+            pointer-events="none">Set rotation to 0° to resize</text>
+    {/if}
+
+    <!-- Rotation handle (single selection only) -->
+    {#if getSelectedComponents().length === 1}
+      {@const hx = comp.width / 2}
+      <!-- Stem line -->
+      <line x1={hx} y1="-2" x2={hx} y2="-18"
+            stroke="#4fc3f7" stroke-width="0.8" stroke-dasharray="2,2" />
+      <!-- Handle circle -->
+      <circle cx={hx} cy="-22" r="5"
+              fill="#0d0d1a" stroke="#4fc3f7" stroke-width="1.2"
+              data-rotate-handle="true"
+              style="cursor: crosshair;">
+        {#if appState.tooltipsEnabled}
+          <title>Drag to rotate · Shift: snap {appState.rotationStep}° · [ ] keys</title>
+        {/if}
+      </circle>
+      <!-- Rotation symbol inside handle -->
+      <path d="M {hx - 2.5} -24 A 2.5 2.5 0 1 1 {hx + 1.5} -19.5"
+            fill="none" stroke="#4fc3f7" stroke-width="1"
+            stroke-linecap="round"
+            pointer-events="none" />
+      <polygon points="{hx + 1.5},-19.5 {hx + 3.5},-21.5 {hx - 0.5},-21"
+               fill="#4fc3f7" pointer-events="none" />
+
+      <!-- Angle label during active rotation drag -->
+      {#if activeRotation !== null}
+        <rect x={hx - 14} y="-38" width="28" height="12" rx="2"
+              fill="#0d0d1a" fill-opacity="0.85" />
+        <text x={hx} y="-29" text-anchor="middle"
+              fill="#4fc3f7" font-size="8" font-family="monospace">{Math.round(activeRotation)}°</text>
+      {/if}
+    {/if}
   </g>
 {/each}

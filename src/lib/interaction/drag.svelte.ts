@@ -4,8 +4,9 @@ import { createComponent, getComponentAtPoint } from '../state/actions.js';
 import { screenToCanvas, snap } from '../utils/geometry.js';
 import { pushHistory } from '../state/history.js';
 import { expandSelection } from '../state/groups.js';
+import { duplicateInPlace } from '../state/clipboard.js';
 
-type DragState = 'idle' | 'moving' | 'selecting' | 'resizing' | 'panning';
+type DragState = 'idle' | 'moving' | 'selecting' | 'resizing' | 'panning' | 'rotating';
 
 let state: DragState = 'idle';
 let startX = 0, startY = 0;
@@ -15,13 +16,25 @@ let spaceHeld = false;
 let hasMoved = false;
 let resizeHandle: string | null = null;
 let resizeStartBounds: { x: number; y: number; w: number; h: number } | null = null;
+let resizeStartAspect = 1;
 let movingIds: string[] = [];
+let ctrlDuplicatePending = false;
 let panStartX = 0, panStartY = 0;
 let panStartVBX = 0, panStartVBY = 0;
 let rubberBand = $state<{ x: number; y: number; w: number; h: number } | null>(null);
 
-export function getRubberBand() {
-  return rubberBand;
+// Rotation drag state
+let rotatingId: string | null = null;
+let rotateCx = 0, rotateCy = 0;
+let rotateStartAngle = 0;
+let rotateStartValue = 0;
+let activeRotation = $state<number | null>(null);
+
+export function getRubberBand() { return rubberBand; }
+export function getActiveRotation() { return activeRotation; }
+
+function normalizeAngle(a: number): number {
+  return ((a % 360) + 360) % 360;
 }
 
 export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => void {
@@ -54,6 +67,29 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
 
     const pt = screenToCanvas(svgEl, e.clientX, e.clientY);
 
+    // Check rotation handle (must come before resize handle check)
+    const rotHandleEl = (e.target as Element).closest?.('[data-rotate-handle]');
+    if (rotHandleEl) {
+      const selFor = (rotHandleEl as Element).closest('[data-selection-for]');
+      if (selFor) {
+        const compId = selFor.getAttribute('data-selection-for')!;
+        const comp = appState.components.find(c => c.id === compId);
+        if (comp) {
+          state = 'rotating';
+          pushHistory();
+          rotatingId = compId;
+          rotateCx = comp.x + comp.width / 2;
+          rotateCy = comp.y + comp.height / 2;
+          rotateStartAngle = Math.atan2(pt.y - rotateCy, pt.x - rotateCx) * 180 / Math.PI;
+          rotateStartValue = comp.rotation || 0;
+          activeRotation = rotateStartValue;
+          hasMoved = false;
+          e.preventDefault();
+          return;
+        }
+      }
+    }
+
     // Check resize handle
     const handleEl = (e.target as Element).closest?.('[data-handle]');
     if (handleEl) {
@@ -66,6 +102,7 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
           pushHistory();
           resizeHandle = handleEl.getAttribute('data-handle');
           resizeStartBounds = { x: comp.x, y: comp.y, w: comp.width, h: comp.height };
+          resizeStartAspect = comp.height > 0 ? comp.width / comp.height : 1;
           startX = pt.x;
           startY = pt.y;
           movingIds = [compId];
@@ -91,6 +128,7 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
     // Check component under cursor
     const clicked = getComponentAtPoint(pt.x, pt.y);
     if (clicked) {
+      const ctrl = e.ctrlKey || e.metaKey;
       if (e.shiftKey) {
         if (isSelected(clicked.id)) {
           removeFromSelection(clicked.id);
@@ -105,6 +143,7 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       pushHistory();
       startX = pt.x;
       startY = pt.y;
+      ctrlDuplicatePending = ctrl;
       // Expand selection to include group members
       movingIds = expandSelection([...appState.selectedIds]);
       appState.selectedIds = movingIds;
@@ -143,6 +182,18 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
     const pt = screenToCanvas(svgEl, e.clientX, e.clientY);
 
     if (state === 'moving') {
+      // Ctrl+drag: on first move, duplicate originals in-place and move copies
+      if (ctrlDuplicatePending && !hasMoved) {
+        ctrlDuplicatePending = false;
+        const copyIds = duplicateInPlace(movingIds);
+        // Originals stay; switch to moving the copies
+        movingIds = copyIds;
+        appState.selectedIds = copyIds;
+        movingStarts = copyIds
+          .map(id => appState.components.find(c => c.id === id))
+          .filter(c => c != null)
+          .map(c => ({ id: c.id, x: c.x, y: c.y }));
+      }
       hasMoved = true;
       const dx = pt.x - startX;
       const dy = pt.y - startY;
@@ -164,6 +215,20 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
         w: Math.abs(pt.x - startX),
         h: Math.abs(pt.y - startY),
       };
+    } else if (state === 'rotating' && rotatingId) {
+      hasMoved = true;
+      const currentAngle = Math.atan2(pt.y - rotateCy, pt.x - rotateCx) * 180 / Math.PI;
+      const delta = currentAngle - rotateStartAngle;
+      let newRotation = normalizeAngle(rotateStartValue + delta);
+      if (e.shiftKey) {
+        const step = appState.rotationStep || 15;
+        newRotation = Math.round(newRotation / step) * step;
+      }
+      const comp = appState.components.find(c => c.id === rotatingId);
+      if (comp) {
+        comp.rotation = newRotation;
+        activeRotation = newRotation;
+      }
     } else if (state === 'resizing' && resizeStartBounds && resizeHandle) {
       hasMoved = true;
       const rdx = pt.x - startX;
@@ -175,6 +240,19 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       if (resizeHandle.includes('l')) { newW = Math.max(10, b.w - rdx); newX = b.x + b.w - newW; }
       if (resizeHandle.includes('b')) { newH = Math.max(10, b.h + rdy); }
       if (resizeHandle.includes('t')) { newH = Math.max(10, b.h - rdy); newY = b.y + b.h - newH; }
+
+      // Shift: constrain aspect ratio on corner handles
+      const isCorner = (resizeHandle.includes('t') || resizeHandle.includes('b'))
+                    && (resizeHandle.includes('l') || resizeHandle.includes('r'));
+      if (e.shiftKey && isCorner) {
+        if (Math.abs(newW - b.w) >= Math.abs(newH - b.h)) {
+          newH = Math.max(10, newW / resizeStartAspect);
+          if (resizeHandle.includes('t')) newY = b.y + b.h - newH;
+        } else {
+          newW = Math.max(10, newH * resizeStartAspect);
+          if (resizeHandle.includes('l')) newX = b.x + b.w - newW;
+        }
+      }
 
       const snapped = snap(newX, newY);
       const comp = appState.components.find(c => c.id === movingIds[0]);
@@ -210,13 +288,19 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
     if (state === 'resizing' && hasMoved) {
       appState.isDirty = true;
     }
+    if (state === 'rotating' && hasMoved) {
+      appState.isDirty = true;
+    }
 
     state = 'idle';
     movingIds = [];
     movingStarts = [];
+    ctrlDuplicatePending = false;
     resizeHandle = null;
     resizeStartBounds = null;
     rubberBand = null;
+    rotatingId = null;
+    activeRotation = null;
   }
 
   function onKeyDown(e: KeyboardEvent) {
