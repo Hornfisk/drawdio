@@ -11,9 +11,14 @@
   import { loadFromFile } from './lib/io/serialization.js';
   import { appState } from './lib/state/app.svelte.js';
 
-  // Keep --accent CSS variable in sync with appState.accentColor
+  // Keep CSS variables + color-scheme in sync with appState
   $effect(() => {
-    document.documentElement.style.setProperty('--accent', appState.accentColor);
+    const root = document.documentElement;
+    root.dataset.theme = appState.theme;
+    root.style.colorScheme = appState.theme;
+    root.style.setProperty('--accent', appState.accentColor);
+    const meta = document.querySelector('meta[name="color-scheme"]');
+    if (meta) meta.setAttribute('content', appState.theme);
   });
 
   onMount(() => {

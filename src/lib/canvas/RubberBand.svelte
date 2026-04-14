@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { appState } from '../state/app.svelte.js';
   import { getRubberBand } from '../interaction/drag.svelte.js';
 
   const rb = $derived(getRubberBand());
@@ -6,7 +7,7 @@
 
 {#if rb}
   <rect x={rb.x} y={rb.y} width={rb.w} height={rb.h}
-        fill="#4fc3f7" fill-opacity="0.1"
-        stroke="#4fc3f7" stroke-width="0.5"
+        fill={appState.accentColor} fill-opacity="0.1"
+        stroke={appState.accentColor} stroke-width="0.5"
         stroke-dasharray="4,3" />
 {/if}

@@ -32,5 +32,6 @@ export const appState = $state({
   placingType: null as string | null,
   rotationStep: 15,
   accentColor: '#4fc3f7',
+  theme: 'dark' as 'dark' | 'light',
   userAssets: [] as UserAsset[],
 });

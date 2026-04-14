@@ -3,5 +3,5 @@
 </script>
 
 <pattern id="grid-pattern" width={appState.gridSize} height={appState.gridSize} patternUnits="userSpaceOnUse">
-  <circle cx="1" cy="1" r="0.5" fill="#333" />
+  <circle cx="1" cy="1" r="0.5" style="fill: var(--border-muted)" />
 </pattern>

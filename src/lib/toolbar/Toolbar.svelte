@@ -136,6 +136,17 @@
                  value={appState.accentColor}
                  oninput={(e) => { appState.accentColor = (e.target as HTMLInputElement).value; }} />
         </div>
+
+        <div class="toolbar-dropdown-sep"></div>
+
+        <!-- Theme toggle -->
+        <div class="toolbar-menu-section-label">Theme</div>
+        <div class="toolbar-theme-toggle">
+          <button class="toolbar-theme-btn" class:active={appState.theme === 'dark'}
+                  onclick={() => appState.theme = 'dark'}>Dark</button>
+          <button class="toolbar-theme-btn" class:active={appState.theme === 'light'}
+                  onclick={() => appState.theme = 'light'}>Light</button>
+        </div>
       </div>
     {/if}
   </div>
