@@ -23,10 +23,20 @@
   --text:            #ccc;
   --text-secondary:  #aaa;
   --text-muted:      #888;
-  --text-dim:        #666;
-  --text-dimmer:     #555;
+  --text-dim:        #777;
+  --text-dimmer:     #666;
   /* Text on accent-coloured background */
   --on-accent:       #0d0d1a;
+  /* Component-level tokens (used in SVG style= attributes) */
+  --component-bg:       #141416;
+  --component-bg-alt:   #2a2a3a;
+  --component-inactive: #383848;
+  --component-label:    #888;
+  --meter-green:        #66bb6a;
+  --meter-yellow:       #ffd54f;
+  --meter-red:          #ef5350;
+  --key-white:          #e8e8e4;
+  --key-black:          #1a1a1a;
 }
 
 /* Light theme overrides */
@@ -45,9 +55,18 @@
   --text:            #1a1a2e;
   --text-secondary:  #3a3a52;
   --text-muted:      #5a5a72;
-  --text-dim:        #7a7a90;
-  --text-dimmer:     #9090a8;
+  --text-dim:        #6a6a80;
+  --text-dimmer:     #808098;
   --on-accent:       #ffffff;
+  --component-bg:       #e8e8ee;
+  --component-bg-alt:   #d0d0da;
+  --component-inactive: #c0c0cc;
+  --component-label:    #666;
+  --meter-green:        #4caf50;
+  --meter-yellow:       #ffb300;
+  --meter-red:          #e53935;
+  --key-white:          #ffffff;
+  --key-black:          #1a1a1a;
 }
 
 html, body { height: 100%; overflow: hidden; }
@@ -280,6 +299,37 @@ body {
 .palette-variant-tab:hover { border-color: var(--text-muted); color: var(--text-secondary); }
 .palette-variant-tab:focus-visible { outline: 2px solid var(--accent); }
 .palette-variant-tab.active { background: color-mix(in srgb, var(--accent) 12%, var(--bg-app)); border-color: var(--accent); color: var(--accent); }
+
+/* Focus rings for inputs and selects */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Disabled state */
+button:disabled,
+input:disabled,
+select:disabled,
+.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Screen-reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
 .palette-add-assets-btn {
   display: block; width: calc(100% - 16px); margin: 4px 8px 6px;
   background: var(--bg-menu); color: var(--text-secondary); border: 1px dashed var(--border-muted);
