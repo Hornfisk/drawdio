@@ -23,6 +23,48 @@ export interface EffectsData {
   texture_fill: TextureEffect;
 }
 
+export type EffectKey = keyof EffectsData;
+
+export interface ComponentProperties {
+  // Label / text
+  text?: string;
+  // Colours
+  bgColor?: string;
+  fgColor?: string;
+  // Image assets
+  imageDataUrl?: string | null;
+  imageName?: string;
+  // Texture
+  textureDataUrl?: string | null;
+  textureOpacity?: number;
+  textureOffsetX?: number;
+  textureOffsetY?: number;
+  textureScale?: number;
+  textureBlend?: string;
+  // Numeric params
+  segments?: number;
+  bars?: number;
+  rows?: number;
+  columns?: number;
+  steps?: string;
+  cellSize?: number;
+  octaves?: number;
+  minNote?: number;
+  maxNote?: number;
+  // State flags
+  default?: boolean;
+  on?: boolean;
+  // Misc display
+  orientation?: string;
+  portsPosition?: string;
+  activeColor?: string;
+  pitchBend?: boolean;
+  modWheel?: boolean;
+  pattern?: string;
+  // Index signature for forward-compatibility with custom properties
+  [key: string]: unknown;
+}
+
 export interface ComponentData {
   id: string;
   type: string;
@@ -33,7 +75,7 @@ export interface ComponentData {
   rotation: number;
   color: string;
   label: string;
-  properties: Record<string, unknown>;
+  properties: ComponentProperties;
   effects: EffectsData;
   group: string | null;
   visible: boolean;
