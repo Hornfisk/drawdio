@@ -48,25 +48,29 @@ export function createDragHandler(opts: DragHandlerOptions): (e: MouseEvent) => 
       window.removeEventListener('mouseup', onMouseUp);
       document.body.style.cursor = '';
 
-      if (ghost) {
-        ghost.remove();
-        ghost = null;
+      try {
+        if (ghost) {
+          ghost.remove();
+          ghost = null;
 
-        const container = document.querySelector('.canvas-container');
-        const svgEl = container?.querySelector('svg');
-        if (container && svgEl) {
-          const rect = container.getBoundingClientRect();
-          const overCanvas =
-            me.clientX >= rect.left && me.clientX <= rect.right &&
-            me.clientY >= rect.top  && me.clientY <= rect.bottom;
-          if (overCanvas) {
-            const canvasPos = screenToCanvas(svgEl as SVGSVGElement, me.clientX, me.clientY);
-            const snapped = snap(canvasPos.x, canvasPos.y);
-            await opts.onDrop(snapped.x, snapped.y);
+          const container = document.querySelector('.canvas-container');
+          const svgEl = container?.querySelector('svg');
+          if (container && svgEl) {
+            const rect = container.getBoundingClientRect();
+            const overCanvas =
+              me.clientX >= rect.left && me.clientX <= rect.right &&
+              me.clientY >= rect.top  && me.clientY <= rect.bottom;
+            if (overCanvas) {
+              const canvasPos = screenToCanvas(svgEl as SVGSVGElement, me.clientX, me.clientY);
+              const snapped = snap(canvasPos.x, canvasPos.y);
+              await opts.onDrop(snapped.x, snapped.y);
+            }
           }
+        } else if (opts.onClick) {
+          await opts.onClick();
         }
-      } else if (opts.onClick) {
-        await opts.onClick();
+      } catch (err) {
+        console.error('drag-to-canvas: drop/click handler failed:', err);
       }
     }
 
