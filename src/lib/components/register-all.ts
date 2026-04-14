@@ -7,12 +7,14 @@ import ToggleSwitch from './controls/ToggleSwitch.svelte';
 import VerticalSlider from './controls/VerticalSlider.svelte';
 import Dropdown from './controls/Dropdown.svelte';
 import XYPad from './controls/XYPad.svelte';
+import MidiKeyboard from './controls/MidiKeyboard.svelte';
 
 // Display
 import LevelMeter from './display/LevelMeter.svelte';
 import WaveformDisplay from './display/WaveformDisplay.svelte';
 import SpectrumAnalyzer from './display/SpectrumAnalyzer.svelte';
 import StepSequencer from './display/StepSequencer.svelte';
+import AcidStepSequencer from './display/AcidStepSequencer.svelte';
 import LabelText from './display/LabelText.svelte';
 import LedIndicator from './display/LedIndicator.svelte';
 import ValueReadout from './display/ValueReadout.svelte';
@@ -109,6 +111,22 @@ export function registerAllComponents(): void {
     ],
   });
 
+  register('midi_keyboard', {
+    component: MidiKeyboard,
+    category: 'Controls',
+    displayName: 'MIDI Keyboard',
+    defaultProps: {
+      width: 360, height: 90, color: '#888', label: '',
+      properties: { octaves: 2, pitchBend: true, modWheel: true, portsPosition: 'front' },
+    },
+    editableProperties: [
+      { key: 'octaves', label: 'Octaves', type: 'number', propPath: 'properties.octaves' },
+      { key: 'pitchBend', label: 'Pitch Bend', type: 'checkbox', propPath: 'properties.pitchBend' },
+      { key: 'modWheel', label: 'Mod Wheel', type: 'checkbox', propPath: 'properties.modWheel' },
+      { key: 'portsPosition', label: 'Ports', type: 'text', propPath: 'properties.portsPosition' },
+    ],
+  });
+
   // --- Display ---
   register('level_meter', {
     component: LevelMeter,
@@ -152,6 +170,8 @@ export function registerAllComponents(): void {
     component: StepSequencer,
     category: 'Display',
     displayName: 'Step Seq',
+    variantGroup: 'sequencer',
+    variantLabel: 'Grid',
     defaultProps: {
       width: 400, height: 48, color: '#4fc3f7', label: '',
       properties: { rows: 1, columns: 16, cellSize: 24, activeColor: '#4fc3f7', pattern: '' },
@@ -161,6 +181,28 @@ export function registerAllComponents(): void {
       { key: 'columns', label: 'Cols', type: 'number', propPath: 'properties.columns' },
       { key: 'cellSize', label: 'Cell', type: 'number', propPath: 'properties.cellSize' },
       { key: 'pattern', label: 'Active', type: 'text', propPath: 'properties.pattern' },
+    ],
+  });
+
+  const defaultAcidSteps = Array.from({ length: 16 }, (_, i) => {
+    const notes = [48, 48, 51, 48, 53, 48, 55, 48, 51, 48, 53, 51, 48, 55, 53, 48];
+    return `${notes[i]}:0:0:0`;
+  }).join(',');
+
+  register('acid_step_sequencer', {
+    component: AcidStepSequencer,
+    category: 'Display',
+    displayName: 'Step Seq',
+    variantGroup: 'sequencer',
+    variantLabel: 'Acid',
+    defaultProps: {
+      width: 520, height: 120, color: '#c42a2a', label: '',
+      properties: { columns: 16, steps: defaultAcidSteps, minNote: 36, maxNote: 60 },
+    },
+    editableProperties: [
+      { key: 'columns', label: 'Steps', type: 'number', propPath: 'properties.columns' },
+      { key: 'minNote', label: 'Min note', type: 'number', propPath: 'properties.minNote' },
+      { key: 'maxNote', label: 'Max note', type: 'number', propPath: 'properties.maxNote' },
     ],
   });
 

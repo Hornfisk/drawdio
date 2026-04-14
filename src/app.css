@@ -221,6 +221,16 @@ body {
   flex-shrink: 0;
 }
 .palette-label { font-size: 12px; }
+.palette-item-group { display: flex; flex-direction: column; }
+.palette-category.collapsed .palette-item-group { display: none; }
+.palette-variant-tabs { display: flex; gap: 3px; padding: 3px 6px 0; }
+.palette-variant-tab {
+  font-size: 9px; padding: 1px 6px; border-radius: 3px; cursor: pointer;
+  background: #1e1e28; border: 1px solid #333; color: #666;
+  font-family: system-ui, sans-serif; line-height: 1.6;
+}
+.palette-variant-tab:hover { border-color: #555; color: #999; }
+.palette-variant-tab.active { background: #1a2a3a; border-color: #4fc3f7; color: #4fc3f7; }
 
 /* ============================================================
    RIGHT PANEL (Properties / Layers)
