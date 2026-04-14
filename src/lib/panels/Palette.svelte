@@ -279,7 +279,16 @@
           <div class="palette-item"
                class:placing={appState.placingType === item.type}
                onmousedown={(e) => onItemMouseDown(e, item.type)}
-               role="button" tabindex="0">
+               onkeydown={(e) => {
+                 if ((e.key === 'Enter' || e.key === ' ') && vg !== 'sequencer') {
+                   e.preventDefault();
+                   appState.placingType = item.type;
+                 }
+               }}
+               role="button" tabindex="0"
+               aria-label="{vg === 'sequencer' ? 'Sequencer — click arrow for variants' : item.entry.displayName + ' — drag to canvas or press Enter to place'}"
+               aria-pressed={appState.placingType === item.type}
+               title="{vg === 'sequencer' ? 'Sequencer — click arrow for variants' : item.entry.displayName + ' — drag to canvas or press Enter to place'}">
             <div class="palette-icon">
               <svg width="20" height="20" viewBox="0 0 20 20">
                 {#if item.type === 'rotary_knob'}

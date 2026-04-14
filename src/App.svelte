@@ -53,6 +53,9 @@
 
 <ContextMenu />
 
+<!-- Screen-reader status announcements (populated by toast/export) -->
+<div id="app-status" role="status" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+
 <!-- Hidden file input for Open -->
 <input type="file" id="file-input" accept=".json,.drawdio.json" style="display:none"
        onchange={(e) => {
