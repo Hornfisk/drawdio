@@ -9,6 +9,12 @@
   import { initShortcuts } from './lib/interaction/shortcuts.js';
   import { checkAutoSave, startAutoSave } from './lib/io/autosave.js';
   import { loadFromFile } from './lib/io/serialization.js';
+  import { appState } from './lib/state/app.svelte.js';
+
+  // Keep --accent CSS variable in sync with appState.accentColor
+  $effect(() => {
+    document.documentElement.style.setProperty('--accent', appState.accentColor);
+  });
 
   onMount(() => {
     const cleanupShortcuts = initShortcuts();
