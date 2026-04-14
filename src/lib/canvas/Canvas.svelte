@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { appState } from '../state/app.svelte.js';
   import { getSortedComponents } from '../state/derived.svelte.js';
+  import { getEntry } from '../components/registry.js';
   import Grid from './Grid.svelte';
   import ComponentRenderer from '../components/svg/ComponentRenderer.svelte';
   import EffectsFilter from '../components/svg/EffectsFilter.svelte';
@@ -24,6 +25,16 @@
 </script>
 
 <div class="canvas-container" bind:this={containerEl}>
+  {#if appState.placingType}
+    {@const entry = getEntry(appState.placingType)}
+    <div class="placement-chip" role="status" aria-live="polite">
+      Placing: {entry?.displayName ?? appState.placingType}
+      <button class="placement-chip-cancel"
+              onclick={() => { appState.placingType = null; }}
+              title="Cancel placement (Esc)"
+              aria-label="Cancel placement">×</button>
+    </div>
+  {/if}
   <svg
     bind:this={svgEl}
     xmlns="http://www.w3.org/2000/svg"
