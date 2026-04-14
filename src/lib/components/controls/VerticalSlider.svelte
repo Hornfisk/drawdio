@@ -13,7 +13,12 @@
   const thumbY = $derived(trackH * (1 - pct) - thumbH / 2);
 </script>
 
-<g>
+<g role="slider"
+   aria-label="{data.label || 'Vertical slider'}"
+   aria-orientation="vertical"
+   aria-valuenow="50"
+   aria-valuemin="0"
+   aria-valuemax="100">
   <rect x={trackX} y="0" width={trackW} height={trackH} rx={trackW / 2} style="fill: var(--component-bg-alt);" />
   <rect x={trackX} y={trackH - fillH} width={trackW} height={fillH}
         rx={trackW / 2} fill={data.color} fill-opacity="0.5" />

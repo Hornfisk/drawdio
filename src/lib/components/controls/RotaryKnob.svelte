@@ -28,7 +28,11 @@
   const pointerY2 = $derived(cy + pLen * Math.sin(pAngle));
 </script>
 
-<g>
+<g role="slider"
+   aria-label="{data.label || 'Rotary knob'}"
+   aria-valuenow="50"
+   aria-valuemin="0"
+   aria-valuemax="100">
   <!-- Body -->
   <circle cx={cx} cy={cy} r={r} style="fill: var(--component-bg-alt);" stroke={data.color} stroke-width="1.5" />
 

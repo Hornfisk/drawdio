@@ -12,7 +12,12 @@
   const thumbCx = $derived(thumbR + trackWidth * pct);
 </script>
 
-<g>
+<g role="slider"
+   aria-label="{data.label || 'Horizontal slider'}"
+   aria-orientation="horizontal"
+   aria-valuenow="50"
+   aria-valuemin="0"
+   aria-valuemax="100">
   <!-- Track background -->
   <rect x={thumbR} y={trackY - trackH / 2}
         width={trackWidth} height={trackH}
