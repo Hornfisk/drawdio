@@ -3,7 +3,9 @@
   let { data }: { data: ComponentData } = $props();
 </script>
 
-<g>
+<g role="button"
+   aria-label="{data.label || 'Button'}"
+   aria-pressed="false">
   <!-- Body -->
   <rect x="0" y="0" width={data.width} height={data.height}
         rx="4" style="fill: var(--component-bg-alt);" stroke={data.color} stroke-width="1" />

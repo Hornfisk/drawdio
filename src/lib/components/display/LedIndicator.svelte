@@ -6,7 +6,9 @@
   const isOn = $derived(data.properties.on as boolean);
 </script>
 
-<g>
+<g role="status"
+   aria-label="{data.label || 'LED indicator'}"
+   aria-live="polite">
   <circle cx={r} cy={r} r={r}
           fill={data.color}
           fill-opacity={isOn ? 0.9 : 0.15}

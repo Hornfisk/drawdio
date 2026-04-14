@@ -11,7 +11,9 @@
   const thumbX = $derived(isOn ? pillW - r : r);
 </script>
 
-<g>
+<g role="switch"
+   aria-label="{data.label || 'Toggle'}"
+   aria-checked={isOn}>
   <rect x="0" y="0" width={pillW} height={pillH} rx={r}
         style="fill: {isOn ? data.color : 'var(--component-bg-alt)'};"
         fill-opacity={isOn ? 0.4 : 1}
