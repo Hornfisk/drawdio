@@ -37,7 +37,7 @@
 <g>
   <!-- Background -->
   <rect x="0" y="0" width={data.width} height={data.height}
-        rx="2" fill="#0e0e10" stroke="#28282e" stroke-width="0.5"/>
+        rx="2" style="fill: var(--component-bg);" stroke="#28282e" stroke-width="0.5"/>
 
   {#each steps as step, i}
     {@const cx   = i * (cellW + gap)}
@@ -48,32 +48,32 @@
 
     <!-- Cell background -->
     <rect x={cx} y="0" width={cellW} height={data.height} rx="1"
-          fill="#141416" stroke={isQ ? '#3a3a42' : '#1e1e22'} stroke-width="0.5"/>
+          style="fill: var(--component-bg);" stroke={isQ ? '#3a3a42' : '#1e1e22'} stroke-width="0.5"/>
 
     <!-- A toggle (accent) -->
     <rect x={cx + 1} y="1" width={tW} height={toggleRowH - 2} rx="1"
-          fill={step.accent ? '#c42a2a' : '#2a2a30'}/>
+          style="fill: {step.accent ? '#c42a2a' : 'var(--component-inactive)'};"  />
     <text x={cx + 1 + tW / 2} y={1 + (toggleRowH - 2) * 0.73} text-anchor="middle"
           fill={step.accent ? '#fff' : '#555'} font-size={tFsz} font-family="monospace">A</text>
 
     <!-- S toggle (slide) -->
     {@const s1x = cx + 1 + tW + 1}
     <rect x={s1x} y="1" width={tW} height={toggleRowH - 2} rx="1"
-          fill={step.slide ? '#f0dc3c' : '#2a2a30'}/>
+          style="fill: {step.slide ? '#f0dc3c' : 'var(--component-inactive)'};" />
     <text x={s1x + tW / 2} y={1 + (toggleRowH - 2) * 0.73} text-anchor="middle"
           fill={step.slide ? '#141416' : '#555'} font-size={tFsz} font-family="monospace">S</text>
 
     <!-- R toggle (rest) -->
     {@const s2x = cx + 1 + (tW + 1) * 2}
     <rect x={s2x} y="1" width={tW} height={toggleRowH - 2} rx="1"
-          fill={step.rest ? '#d6d6da' : '#2a2a30'}/>
+          style="fill: {step.rest ? '#d6d6da' : 'var(--component-inactive)'};" />
     <text x={s2x + tW / 2} y={1 + (toggleRowH - 2) * 0.73} text-anchor="middle"
           fill={step.rest ? '#141416' : '#555'} font-size={tFsz} font-family="monospace">R</text>
 
     <!-- Pitch slider track -->
     {@const trackX = cx + cellW / 2 - trackW / 2}
     <rect x={trackX} y={toggleRowH} width={trackW} height={sliderRowH}
-          rx="1.5" fill="#1c1c20"/>
+          rx="1.5" style="fill: var(--component-bg);" />
 
     <!-- Pitch thumb (hidden when rest) -->
     {#if !step.rest}

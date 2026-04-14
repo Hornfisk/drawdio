@@ -9,7 +9,7 @@
 
 <g>
   <rect x="0" y="0" width={data.width} height={data.height}
-        rx="3" fill="#0a0a1a" stroke="#333" stroke-width="0.5" />
+        rx="3" style="fill: var(--component-bg);" stroke="#333" stroke-width="0.5" />
   {#each Array(bars) as _, i}
     {@const h = data.height * (0.3 + 0.5 * Math.abs(Math.sin(i * 0.7 + 0.5)) * Math.cos(i * 0.3))}
     {@const bx = gap + i * (barW + gap)}

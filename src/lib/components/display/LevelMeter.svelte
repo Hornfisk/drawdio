@@ -7,7 +7,9 @@
   const gap = 2;
 
   function segColor(pct: number): string {
-    return pct < 0.6 ? '#66bb6a' : pct < 0.8 ? '#ffd54f' : '#ef5350';
+    if (pct < 0.6) return 'var(--meter-green)';
+    if (pct < 0.8) return 'var(--meter-yellow)';
+    return 'var(--meter-red)';
   }
 </script>
 
@@ -19,7 +21,7 @@
       {@const pct = i / segs}
       {@const lit = i < segs * 0.65}
       <rect x="0" y={sy} width={data.width} height={segH}
-            rx="1" fill={segColor(pct)} fill-opacity={lit ? 0.9 : 0.15} />
+            rx="1" style="fill: {segColor(pct)};" fill-opacity={lit ? 0.9 : 0.15} />
     {/each}
   {:else}
     {#each Array(segs) as _, i}
@@ -28,7 +30,7 @@
       {@const pct = i / segs}
       {@const lit = i < segs * 0.65}
       <rect x={sx} y="0" width={segW} height={data.height}
-            rx="1" fill={segColor(pct)} fill-opacity={lit ? 0.9 : 0.15} />
+            rx="1" style="fill: {segColor(pct)};" fill-opacity={lit ? 0.9 : 0.15} />
     {/each}
   {/if}
 </g>
