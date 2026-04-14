@@ -24,4 +24,5 @@ export const appState = $state({
   fileName: null as string | null,
   tooltipsEnabled: true,
   placingType: null as string | null,
+  rotationStep: 15,
 });

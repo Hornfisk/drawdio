@@ -2,7 +2,6 @@ import { register } from './registry.js';
 
 // Controls
 import RotaryKnob from './controls/RotaryKnob.svelte';
-import HorizontalSlider from './controls/HorizontalSlider.svelte';
 import MomentaryButton from './controls/MomentaryButton.svelte';
 import ToggleSwitch from './controls/ToggleSwitch.svelte';
 import VerticalSlider from './controls/VerticalSlider.svelte';
@@ -32,22 +31,6 @@ export function registerAllComponents(): void {
     displayName: 'Knob',
     defaultProps: {
       width: 48, height: 60, color: '#4fc3f7', label: 'Knob',
-      properties: { min: 0, max: 100, default: 50, unit: '' },
-    },
-    editableProperties: [
-      { key: 'min', label: 'Min', type: 'number', propPath: 'properties.min' },
-      { key: 'max', label: 'Max', type: 'number', propPath: 'properties.max' },
-      { key: 'default', label: 'Default', type: 'number', propPath: 'properties.default' },
-      { key: 'unit', label: 'Unit', type: 'text', propPath: 'properties.unit' },
-    ],
-  });
-
-  register('horizontal_slider', {
-    component: HorizontalSlider,
-    category: 'Controls',
-    displayName: 'H Slider',
-    defaultProps: {
-      width: 120, height: 36, color: '#4fc3f7', label: 'Slider',
       properties: { min: 0, max: 100, default: 50, unit: '' },
     },
     editableProperties: [

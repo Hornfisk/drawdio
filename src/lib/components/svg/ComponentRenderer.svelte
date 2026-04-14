@@ -19,7 +19,7 @@
 {#if entry}
   {@const Component = entry.component}
   <g data-id={data.id}
-     transform="translate({data.x}, {data.y})"
+     transform="translate({data.x}, {data.y}) rotate({data.rotation || 0}, {data.width / 2}, {data.height / 2})"
      style="cursor: move;"
      filter={hasFilter ? `url(#${filterId})` : undefined}>
     <Component {data} />

@@ -59,6 +59,12 @@
       <input class="props-input props-input-sm" type="number" value={selected.height} min="10"
              oninput={(e) => { selected.height = Math.max(10, Number((e.target as HTMLInputElement).value)); appState.isDirty = true; }} />
     </div>
+    <div class="props-row">
+      <span class="props-label">Rot°</span>
+      <input class="props-input props-input-sm" type="number" value={selected.rotation || 0}
+             min="0" max="360" step="1"
+             oninput={(e) => { selected.rotation = ((Number((e.target as HTMLInputElement).value) % 360) + 360) % 360; appState.isDirty = true; }} />
+    </div>
   </CollapsibleSection>
 
   <CollapsibleSection title="Appearance">

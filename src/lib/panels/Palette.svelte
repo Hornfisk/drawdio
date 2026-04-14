@@ -128,9 +128,6 @@
               {#if item.type === 'rotary_knob'}
                 <circle cx="10" cy="10" r="8" fill="none" stroke="#4fc3f7" stroke-width="1.5"/>
                 <line x1="10" y1="10" x2="10" y2="3" stroke="#4fc3f7" stroke-width="1.5" stroke-linecap="round"/>
-              {:else if item.type === 'horizontal_slider'}
-                <rect x="0" y="7.5" width="20" height="3.5" rx="1.5" fill="#555"/>
-                <circle cx="12" cy="9.25" r="5" fill="#4fc3f7"/>
               {:else if item.type === 'vertical_slider'}
                 <rect x="8.5" y="0" width="3" height="20" rx="1.5" fill="#555"/>
                 <rect x="4" y="7" width="12" height="5" rx="2" fill="#4fc3f7"/>
