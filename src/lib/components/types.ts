@@ -28,6 +28,10 @@ export type EffectKey = keyof EffectsData;
 export interface ComponentProperties {
   // Label / text
   text?: string;
+  fontSize?: number;
+  bold?: boolean;
+  italic?: boolean;
+  fontFamily?: string;
   // Colours
   bgColor?: string;
   fgColor?: string;
@@ -51,6 +55,21 @@ export interface ComponentProperties {
   octaves?: number;
   minNote?: number;
   maxNote?: number;
+  min?: number;
+  max?: number;
+  // Control states
+  selected?: string;
+  value?: number | string;
+  unit?: string;
+  // Slider/input params
+  thickness?: number;
+  // Panel/layout
+  cornerRadius?: number;
+  borderWidth?: number;
+  bgOpacity?: number;
+  // XY Pad labels
+  'x-label'?: string;
+  'y-label'?: string;
   // State flags
   default?: boolean;
   on?: boolean;
