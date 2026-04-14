@@ -1,5 +1,6 @@
 import { appState } from '../state/app.svelte.js';
 import { toJSON, fromJSON } from './serialization.js';
+import { showToast } from '../state/toast.svelte.js';
 
 export function startAutoSave(): () => void {
   const timer = setInterval(() => {
@@ -8,12 +9,7 @@ export function startAutoSave(): () => void {
       const json = toJSON();
       localStorage.setItem('drawdio_autosave', JSON.stringify(json));
       localStorage.setItem('drawdio_autosave_time', Date.now().toString());
-      // Flash the autosave dot
-      const dot = document.querySelector('.autosave-dot');
-      if (dot) {
-        dot.classList.add('flash');
-        setTimeout(() => dot.classList.remove('flash'), 1500);
-      }
+      showToast('Auto-saved', 1500);
     } catch (err) {
       console.warn('Autosave failed (localStorage may be full):', err);
     }

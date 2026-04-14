@@ -1,5 +1,6 @@
 import { appState } from '../state/app.svelte.js';
 import { download, toJSON } from './serialization.js';
+import { showToast } from '../state/toast.svelte.js';
 
 export function exportPNG(scale = 1, transparent = false) {
   const svgEl = document.querySelector('.canvas-container svg') as SVGSVGElement;
@@ -47,6 +48,7 @@ export function exportPNG(scale = 1, transparent = false) {
       if (blob) {
         const suffix = transparent ? '-transparent' : '';
         download(blob, `drawdio-export${suffix}-${scale}x.png`, 'image/png');
+        showToast('Exported as PNG (' + scale + '×)');
       }
     }, 'image/png');
   };
@@ -73,10 +75,12 @@ export function exportSVG() {
   const serializer = new XMLSerializer();
   const svgString = '<?xml version="1.0" encoding="UTF-8"?>\n' + serializer.serializeToString(clone);
   download(svgString, 'drawdio-export.svg', 'image/svg+xml');
+  showToast('Exported as SVG');
 }
 
 export function copyJSONToClipboard() {
   const json = toJSON();
   const str = JSON.stringify(json, null, 2);
   navigator.clipboard.writeText(str);
+  showToast('JSON copied to clipboard');
 }

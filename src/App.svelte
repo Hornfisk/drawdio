@@ -5,6 +5,7 @@
   import PropertiesPanel from './lib/panels/PropertiesPanel.svelte';
   import LayersPanel from './lib/panels/LayersPanel.svelte';
   import ContextMenu from './lib/ui/ContextMenu.svelte';
+  import Toast from './lib/ui/Toast.svelte';
   import Toolbar from './lib/toolbar/Toolbar.svelte';
   import { initShortcuts } from './lib/interaction/shortcuts.js';
   import { checkAutoSave, startAutoSave } from './lib/io/autosave.js';
@@ -52,6 +53,7 @@
 </div>
 
 <ContextMenu />
+<Toast />
 
 <!-- Screen-reader status announcements (populated by toast/export) -->
 <div id="app-status" role="status" aria-live="polite" aria-atomic="true" class="sr-only"></div>
