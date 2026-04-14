@@ -179,16 +179,19 @@
       class="toolbar-btn"
       class:active={appState.tooltipsEnabled}
       onclick={() => appState.tooltipsEnabled = !appState.tooltipsEnabled}
+      title="Show component tips"
     >Tips</button>
     <button
       class="toolbar-btn"
       class:active={appState.snapEnabled}
       onclick={() => appState.snapEnabled = !appState.snapEnabled}
+      title="Snap to grid"
     >Snap</button>
     <button
       class="toolbar-btn"
       class:active={appState.gridVisible}
       onclick={() => appState.gridVisible = !appState.gridVisible}
+      title="Toggle grid (G)"
     >Grid</button>
     <label class="toolbar-info toolbar-step-label" for="toolbar-rot-step" title="Rotation step for [ ] keys (Shift: always ±45°)">°step</label>
     <input
