@@ -14,13 +14,13 @@
 </script>
 
 <g>
-  <rect x={trackX} y="0" width={trackW} height={trackH} rx={trackW / 2} fill="#2a2a3a" />
+  <rect x={trackX} y="0" width={trackW} height={trackH} rx={trackW / 2} style="fill: var(--component-bg-alt);" />
   <rect x={trackX} y={trackH - fillH} width={trackW} height={fillH}
         rx={trackW / 2} fill={data.color} fill-opacity="0.5" />
   <rect x={data.width / 2 - thumbW / 2} y={thumbY} width={thumbW} height={thumbH}
-        rx="2" fill="#ddd" stroke={data.color} stroke-width="1.5" />
+        rx="2" style="fill: var(--key-white);" stroke={data.color} stroke-width="1.5" />
   {#if data.label}
-    <text x={data.width / 2} y={data.height - 2} text-anchor="middle" fill="#aaa"
+    <text x={data.width / 2} y={data.height - 2} text-anchor="middle" style="fill: var(--component-label);"
           font-size="10" font-family="system-ui, sans-serif">{data.label}</text>
   {/if}
   <rect x="0" y="0" width={data.width} height={data.height} fill="transparent" />

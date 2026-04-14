@@ -30,7 +30,7 @@
 
 <g>
   <!-- Body -->
-  <circle cx={cx} cy={cy} r={r} fill="#2a2a3a" stroke={data.color} stroke-width="1.5" />
+  <circle cx={cx} cy={cy} r={r} style="fill: var(--component-bg-alt);" stroke={data.color} stroke-width="1.5" />
 
   <!-- Value arc -->
   {#if arcR > 2}
@@ -46,7 +46,7 @@
 
   <!-- Label -->
   {#if data.label}
-    <text x={cx} y={data.height - 2} text-anchor="middle" fill="#aaa"
+    <text x={cx} y={data.height - 2} text-anchor="middle" style="fill: var(--component-label);"
           font-size="10" font-family="system-ui, sans-serif">{data.label}</text>
   {/if}
 
