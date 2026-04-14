@@ -13,6 +13,10 @@ export interface RegistryEntry {
     properties: Record<string, unknown>;
   };
   editableProperties: PropertySpec[];
+  /** If set, this entry is grouped with others sharing the same variantGroup in the palette */
+  variantGroup?: string;
+  /** Short label shown on the variant tab, e.g. "Grid", "Acid" */
+  variantLabel?: string;
 }
 
 const entries = new Map<string, RegistryEntry>();

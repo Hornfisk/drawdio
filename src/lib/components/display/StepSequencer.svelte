@@ -4,21 +4,32 @@
 
   const rows = $derived((data.properties.rows as number) || 1);
   const cols = $derived((data.properties.columns as number) || 16);
-  const cs = $derived((data.properties.cellSize as number) || 24);
+  const cs = $derived((data.properties.cellSize as number) || 20);
   const gap = 2;
+
+  // Auto-scale: fill the component bounds (non-square cells allowed)
+  const cellW = $derived(Math.max(cs, Math.floor((data.width - (cols - 1) * gap) / cols)));
+  const cellH = $derived(rows > 1
+    ? Math.max(cs, Math.floor((data.height - (rows - 1) * gap) / rows))
+    : cellW);
+
   const pattern = $derived(((data.properties.pattern as string) || '').split(','));
 </script>
 
 <g>
+  <!-- Background -->
+  <rect x="0" y="0" width={data.width} height={data.height}
+        rx="3" fill="#141416" stroke="#2a2a3a" stroke-width="0.5"/>
+
   {#each Array(rows) as _, row}
     {#each Array(cols) as _, col}
       {@const key = row + '_' + col}
       {@const active = pattern.includes(key)}
-      {@const cx = col * (cs + gap)}
-      {@const cy = row * (cs + gap)}
-      <rect x={cx} y={cy} width={cs} height={cs} rx="2"
-            fill={active ? ((data.properties.activeColor as string) || data.color) : '#1a1a2a'}
-            stroke={active ? data.color : '#333'}
+      {@const cx = col * (cellW + gap)}
+      {@const cy = row * (cellH + gap)}
+      <rect x={cx} y={cy} width={cellW} height={cellH} rx="2"
+            fill={active ? ((data.properties.activeColor as string) || data.color) : '#2a2a3a'}
+            stroke={active ? data.color : '#3a3a4a'}
             stroke-width="0.5"
             data-cell={key} />
     {/each}
