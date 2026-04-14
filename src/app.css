@@ -2,6 +2,7 @@
    RESET & BASE
    ============================================================ */
 * { margin: 0; padding: 0; box-sizing: border-box; }
+:root { color-scheme: dark; }
 html, body { height: 100%; overflow: hidden; }
 body {
   font-family: system-ui, -apple-system, sans-serif;
@@ -67,7 +68,7 @@ body {
 /* ============================================================
    LAYOUT
    ============================================================ */
-#app {
+#app-layout {
   display: flex;
   height: calc(100vh - 40px);
 }

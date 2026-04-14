@@ -17,7 +17,7 @@
   let x = $state(0);
   let y = $state(0);
   let items = $state<MenuItem[]>([]);
-  let menuEl: HTMLDivElement | undefined;
+  let menuEl = $state<HTMLDivElement | undefined>(undefined);
 
   function buildForSelection(): MenuItem[] {
     const hasSelection = appState.selectedIds.length > 0;
@@ -111,6 +111,7 @@
       {:else}
         <div class="context-menu-item" class:disabled={item.disabled}
              onclick={() => onItemClick(item)}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') onItemClick(item); }}
              role="menuitem" tabindex="0">
           <span>{item.label}</span>
           {#if item.shortcut}

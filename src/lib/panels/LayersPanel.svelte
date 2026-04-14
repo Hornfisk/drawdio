@@ -35,10 +35,12 @@
          class:selected={isSelected(comp.id)}
          class:hidden-layer={comp.visible === false}
          onclick={() => select(comp.id)}
+         onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') select(comp.id); }}
          role="button" tabindex="0">
       <span class="layer-eye"
             title={comp.visible !== false ? 'Hide' : 'Show'}
             onclick={(e) => toggleVisibility(e, comp)}
+            onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleVisibility(e, comp); }}
             role="button" tabindex="0">
         {comp.visible !== false ? '\u25C9' : '\u25CE'}
       </span>
@@ -47,9 +49,11 @@
       <span class="layer-arrows">
         <span class="layer-arrow" title="Move up"
               onclick={(e) => moveUp(e, comp.id)}
+              onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') moveUp(e, comp.id); }}
               role="button" tabindex="0">{'\u25B4'}</span>
         <span class="layer-arrow" title="Move down"
               onclick={(e) => moveDown(e, comp.id)}
+              onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') moveDown(e, comp.id); }}
               role="button" tabindex="0">{'\u25BE'}</span>
       </span>
     </div>

@@ -39,18 +39,28 @@
   <div class="toolbar-dropdown">
     <button class="toolbar-btn" onclick={toggleFile}>File</button>
     {#if fileMenuOpen}
-      <div class="toolbar-dropdown-menu open" onclick={(e: MouseEvent) => e.stopPropagation()}>
-        <div class="toolbar-dropdown-item" onclick={() => { closeMenus(); newProject(); }}>
+      <div class="toolbar-dropdown-menu open" role="menu"
+           onclick={(e: MouseEvent) => e.stopPropagation()}
+           onkeydown={(e: KeyboardEvent) => e.stopPropagation()}>
+        <div class="toolbar-dropdown-item" role="button" tabindex="0"
+             onclick={() => { closeMenus(); newProject(); }}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenus(); newProject(); } }}>
           <span>New</span>
         </div>
-        <div class="toolbar-dropdown-item" onclick={() => { closeMenus(); document.getElementById('file-input')?.click(); }}>
+        <div class="toolbar-dropdown-item" role="button" tabindex="0"
+             onclick={() => { closeMenus(); document.getElementById('file-input')?.click(); }}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenus(); document.getElementById('file-input')?.click(); } }}>
           <span>Open...</span><span class="toolbar-dropdown-shortcut">Ctrl+O</span>
         </div>
         <div class="toolbar-dropdown-sep"></div>
-        <div class="toolbar-dropdown-item" onclick={() => { closeMenus(); save(); }}>
+        <div class="toolbar-dropdown-item" role="button" tabindex="0"
+             onclick={() => { closeMenus(); save(); }}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenus(); save(); } }}>
           <span>Save</span><span class="toolbar-dropdown-shortcut">Ctrl+S</span>
         </div>
-        <div class="toolbar-dropdown-item" onclick={() => { closeMenus(); saveAs(); }}>
+        <div class="toolbar-dropdown-item" role="button" tabindex="0"
+             onclick={() => { closeMenus(); saveAs(); }}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenus(); saveAs(); } }}>
           <span>Save As...</span>
         </div>
       </div>
@@ -61,28 +71,44 @@
   <div class="toolbar-dropdown">
     <button class="toolbar-btn" onclick={toggleExport}>Export</button>
     {#if exportMenuOpen}
-      <div class="toolbar-dropdown-menu open" onclick={(e: MouseEvent) => e.stopPropagation()}>
-        <div class="toolbar-dropdown-item" onclick={() => { closeMenus(); exportPNG(1); }}>
+      <div class="toolbar-dropdown-menu open" role="menu"
+           onclick={(e: MouseEvent) => e.stopPropagation()}
+           onkeydown={(e: KeyboardEvent) => e.stopPropagation()}>
+        <div class="toolbar-dropdown-item" role="button" tabindex="0"
+             onclick={() => { closeMenus(); exportPNG(1); }}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenus(); exportPNG(1); } }}>
           <span>PNG 1x</span><span class="toolbar-dropdown-shortcut">Ctrl+E</span>
         </div>
-        <div class="toolbar-dropdown-item" onclick={() => { closeMenus(); exportPNG(2); }}>
+        <div class="toolbar-dropdown-item" role="button" tabindex="0"
+             onclick={() => { closeMenus(); exportPNG(2); }}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenus(); exportPNG(2); } }}>
           <span>PNG 2x</span>
         </div>
-        <div class="toolbar-dropdown-item" onclick={() => { closeMenus(); exportPNG(3); }}>
+        <div class="toolbar-dropdown-item" role="button" tabindex="0"
+             onclick={() => { closeMenus(); exportPNG(3); }}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenus(); exportPNG(3); } }}>
           <span>PNG 3x</span>
         </div>
-        <div class="toolbar-dropdown-item" onclick={() => { closeMenus(); exportPNG(1, true); }}>
+        <div class="toolbar-dropdown-item" role="button" tabindex="0"
+             onclick={() => { closeMenus(); exportPNG(1, true); }}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenus(); exportPNG(1, true); } }}>
           <span>PNG Transparent</span>
         </div>
         <div class="toolbar-dropdown-sep"></div>
-        <div class="toolbar-dropdown-item" onclick={() => { closeMenus(); exportSVG(); }}>
+        <div class="toolbar-dropdown-item" role="button" tabindex="0"
+             onclick={() => { closeMenus(); exportSVG(); }}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenus(); exportSVG(); } }}>
           <span>SVG</span><span class="toolbar-dropdown-shortcut">Ctrl+Shift+E</span>
         </div>
         <div class="toolbar-dropdown-sep"></div>
-        <div class="toolbar-dropdown-item" onclick={() => { closeMenus(); save(); }}>
+        <div class="toolbar-dropdown-item" role="button" tabindex="0"
+             onclick={() => { closeMenus(); save(); }}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenus(); save(); } }}>
           <span>JSON File</span>
         </div>
-        <div class="toolbar-dropdown-item" onclick={() => { closeMenus(); copyJSONToClipboard(); }}>
+        <div class="toolbar-dropdown-item" role="button" tabindex="0"
+             onclick={() => { closeMenus(); copyJSONToClipboard(); }}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenus(); copyJSONToClipboard(); } }}>
           <span>JSON to Clipboard</span><span class="toolbar-dropdown-shortcut">Ctrl+Shift+C</span>
         </div>
       </div>
