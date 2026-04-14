@@ -13,7 +13,7 @@
 
 <g>
   <rect x="0" y="0" width={pillW} height={pillH} rx={r}
-        fill={isOn ? data.color : '#2a2a3a'}
+        style="fill: {isOn ? data.color : 'var(--component-bg-alt)'};"
         fill-opacity={isOn ? 0.4 : 1}
         stroke={data.color} stroke-width="1" />
   <circle cx={thumbX} cy={r} r={thumbR}

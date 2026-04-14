@@ -34,41 +34,41 @@
 <g>
   <!-- Keyboard body background -->
   <rect x="0" y="0" width={data.width} height={data.height}
-        rx="2" style="fill: var(--component-bg);" stroke="#333" stroke-width="0.5"/>
+        rx="2" style="fill: var(--component-bg); stroke: var(--component-bg-alt); stroke-width: 0.5;"/>
 
   <!-- Side strips: pitch bend then mod wheel -->
   {#if hasPB}
     {@const sx = 0}
     <!-- PB strip -->
     <rect x={sx} y="0" width={sideW} height={data.height}
-          rx="1" style="fill: var(--key-black);" stroke="#2a2a2a" stroke-width="0.5"/>
+          rx="1" style="fill: var(--key-black); stroke: var(--key-black); stroke-width: 0.5;"/>
     <!-- PB label -->
     <text x={sx + sideW / 2} y={data.height * 0.22} text-anchor="middle"
           style="fill: var(--component-label);" font-size={Math.min(6, sideW * 0.45)} font-family="monospace">PB</text>
     <!-- PB track -->
     <rect x={sx + sideW * 0.35} y={data.height * 0.28} width={sideW * 0.3} height={data.height * 0.6}
-          rx="1" style="fill: var(--component-bg);" stroke="#333" stroke-width="0.5"/>
+          rx="1" style="fill: var(--component-bg); stroke: var(--component-bg-alt); stroke-width: 0.5;"/>
     <!-- PB thumb (center = neutral) -->
     <rect x={sx + sideW * 0.2} y={data.height * 0.28 + data.height * 0.6 * 0.5 - 3}
           width={sideW * 0.6} height={Math.max(4, data.height * 0.08)} rx="1"
-          fill="#3a3a42" stroke="#555" stroke-width="0.5"/>
+          style="fill: var(--component-bg-alt); stroke: var(--component-label); stroke-width: 0.5;"/>
   {/if}
 
   {#if hasMW}
     {@const sx = hasPB ? sideW : 0}
     <!-- MW strip -->
     <rect x={sx} y="0" width={sideW} height={data.height}
-          rx="1" style="fill: var(--key-black);" stroke="#2a2a2a" stroke-width="0.5"/>
+          rx="1" style="fill: var(--key-black); stroke: var(--key-black); stroke-width: 0.5;"/>
     <!-- MW label -->
     <text x={sx + sideW / 2} y={data.height * 0.22} text-anchor="middle"
           style="fill: var(--component-label);" font-size={Math.min(6, sideW * 0.45)} font-family="monospace">MW</text>
     <!-- MW track -->
     <rect x={sx + sideW * 0.35} y={data.height * 0.28} width={sideW * 0.3} height={data.height * 0.6}
-          rx="1" style="fill: var(--component-bg);" stroke="#333" stroke-width="0.5"/>
+          rx="1" style="fill: var(--component-bg); stroke: var(--component-bg-alt); stroke-width: 0.5;"/>
     <!-- MW thumb (bottom = 0) -->
     <rect x={sx + sideW * 0.2} y={data.height * 0.28 + data.height * 0.6 * 0.8 - 3}
           width={sideW * 0.6} height={Math.max(4, data.height * 0.08)} rx="1"
-          fill="#3a3a42" stroke="#555" stroke-width="0.5"/>
+          style="fill: var(--component-bg-alt); stroke: var(--component-label); stroke-width: 0.5;"/>
   {/if}
 
   <!-- White keys -->
