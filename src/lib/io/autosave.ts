@@ -14,8 +14,8 @@ export function startAutoSave(): () => void {
         dot.classList.add('flash');
         setTimeout(() => dot.classList.remove('flash'), 1500);
       }
-    } catch {
-      // localStorage full or unavailable
+    } catch (err) {
+      console.warn('Autosave failed (localStorage may be full):', err);
     }
   }, 30000);
 
@@ -33,7 +33,7 @@ export function checkAutoSave() {
         fromJSON(JSON.parse(saved));
       }
     }
-  } catch {
-    // ignore
+  } catch (err) {
+    console.warn('Failed to restore autosave:', err);
   }
 }

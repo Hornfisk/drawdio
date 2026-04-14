@@ -13,8 +13,8 @@ let redoStack: Snapshot[] = [];
 
 function takeSnapshot(): Snapshot {
   return {
-    components: JSON.parse(JSON.stringify(appState.components)),
-    groups: JSON.parse(JSON.stringify(appState.groups)),
+    components: structuredClone(appState.components),
+    groups: structuredClone(appState.groups),
     selectedIds: [...appState.selectedIds],
   };
 }
@@ -36,18 +36,16 @@ export function pushHistory() {
 
 export function undo() {
   if (undoStack.length === 0) return;
-  const current = takeSnapshot();
-  redoStack.push(current);
-  const prev = undoStack.pop()!;
-  applySnapshot(prev);
+  undoStack.push(takeSnapshot());
+  const prev = undoStack.pop();
+  if (prev) applySnapshot(prev);
 }
 
 export function redo() {
   if (redoStack.length === 0) return;
-  const current = takeSnapshot();
-  undoStack.push(current);
-  const next = redoStack.pop()!;
-  applySnapshot(next);
+  undoStack.push(takeSnapshot());
+  const next = redoStack.pop();
+  if (next) applySnapshot(next);
 }
 
 export function clearHistory() {
