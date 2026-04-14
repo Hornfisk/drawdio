@@ -26,6 +26,9 @@
   }
 
   const activeRotation = $derived(getActiveRotation());
+  const accent      = $derived(appState.accentColor);
+  const handleFill  = $derived(appState.theme === 'light' ? '#ffffff' : '#0d0d1a');
+  const hintColor   = $derived(appState.theme === 'light' ? '#7a7a90' : '#666');
 </script>
 
 {#each getSelectedComponents() as comp (comp.id)}
@@ -37,7 +40,7 @@
     <!-- Dashed border -->
     <rect x="-2" y="-2"
           width={comp.width + 4} height={comp.height + 4}
-          fill="none" stroke="#4fc3f7" stroke-width="0.8"
+          fill="none" stroke={accent} stroke-width="0.8"
           stroke-dasharray="4,3" />
 
     <!-- Resize handles — hidden when component is rotated -->
@@ -46,7 +49,7 @@
         {@const isCorner = (handle.pos === 'tl' || handle.pos === 'tr' || handle.pos === 'br' || handle.pos === 'bl')}
         <rect x={handle.x} y={handle.y}
               width={hs} height={hs}
-              fill="#4fc3f7" stroke="#0d0d1a" stroke-width="1"
+              fill={accent} stroke={handleFill} stroke-width="1"
               data-handle={handle.pos} rx="1"
               style="cursor: {handle.cursor};">
           {#if appState.tooltipsEnabled}
@@ -58,7 +61,7 @@
     {#if isRotated && appState.tooltipsEnabled}
       <!-- Hint that resize is available at 0° -->
       <text x={comp.width / 2} y={comp.height + 14} text-anchor="middle"
-            fill="#666" font-size="8" font-family="system-ui"
+            fill={hintColor} font-size="8" font-family="system-ui"
             pointer-events="none">Set rotation to 0° to resize</text>
     {/if}
 
@@ -67,10 +70,10 @@
       {@const hx = comp.width / 2}
       <!-- Stem line -->
       <line x1={hx} y1="-2" x2={hx} y2="-18"
-            stroke="#4fc3f7" stroke-width="0.8" stroke-dasharray="2,2" />
+            stroke={accent} stroke-width="0.8" stroke-dasharray="2,2" />
       <!-- Handle circle -->
       <circle cx={hx} cy="-22" r="5"
-              fill="#0d0d1a" stroke="#4fc3f7" stroke-width="1.2"
+              fill={handleFill} stroke={accent} stroke-width="1.2"
               data-rotate-handle="true"
               style="cursor: crosshair;">
         {#if appState.tooltipsEnabled}
@@ -79,18 +82,18 @@
       </circle>
       <!-- Rotation symbol inside handle -->
       <path d="M {hx - 2.5} -24 A 2.5 2.5 0 1 1 {hx + 1.5} -19.5"
-            fill="none" stroke="#4fc3f7" stroke-width="1"
+            fill="none" stroke={accent} stroke-width="1"
             stroke-linecap="round"
             pointer-events="none" />
       <polygon points="{hx + 1.5},-19.5 {hx + 3.5},-21.5 {hx - 0.5},-21"
-               fill="#4fc3f7" pointer-events="none" />
+               fill={accent} pointer-events="none" />
 
       <!-- Angle label during active rotation drag -->
       {#if activeRotation !== null}
         <rect x={hx - 14} y="-38" width="28" height="12" rx="2"
-              fill="#0d0d1a" fill-opacity="0.85" />
+              fill={handleFill} fill-opacity="0.85" />
         <text x={hx} y="-29" text-anchor="middle"
-              fill="#4fc3f7" font-size="8" font-family="monospace">{Math.round(activeRotation)}°</text>
+              fill={accent} font-size="8" font-family="monospace">{Math.round(activeRotation)}°</text>
       {/if}
     {/if}
   </g>
