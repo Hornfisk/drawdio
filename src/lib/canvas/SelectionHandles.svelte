@@ -12,16 +12,25 @@
     pos: string;
   }
 
+  // Handles sit fully outside the dashed border (which is inset by 2px on each side)
+  // so they don't obscure the component being resized.
+  const gap = 3;
   function getHandles(w: number, h: number): HandlePos[] {
+    const left = -2 - gap - hs;
+    const right = w + 2 + gap;
+    const top = -2 - gap - hs;
+    const bottom = h + 2 + gap;
+    const midX = w / 2 - hs / 2;
+    const midY = h / 2 - hs / 2;
     return [
-      { x: -hs / 2 - 2, y: -hs / 2 - 2, cursor: 'nwse-resize', pos: 'tl' },
-      { x: w / 2 - hs / 2, y: -hs / 2 - 2, cursor: 'ns-resize', pos: 'tc' },
-      { x: w + 2 - hs / 2, y: -hs / 2 - 2, cursor: 'nesw-resize', pos: 'tr' },
-      { x: w + 2 - hs / 2, y: h / 2 - hs / 2, cursor: 'ew-resize', pos: 'mr' },
-      { x: w + 2 - hs / 2, y: h + 2 - hs / 2, cursor: 'nwse-resize', pos: 'br' },
-      { x: w / 2 - hs / 2, y: h + 2 - hs / 2, cursor: 'ns-resize', pos: 'bc' },
-      { x: -hs / 2 - 2, y: h + 2 - hs / 2, cursor: 'nesw-resize', pos: 'bl' },
-      { x: -hs / 2 - 2, y: h / 2 - hs / 2, cursor: 'ew-resize', pos: 'ml' },
+      { x: left,  y: top,    cursor: 'nwse-resize', pos: 'tl' },
+      { x: midX,  y: top,    cursor: 'ns-resize',   pos: 'tc' },
+      { x: right, y: top,    cursor: 'nesw-resize', pos: 'tr' },
+      { x: right, y: midY,   cursor: 'ew-resize',   pos: 'mr' },
+      { x: right, y: bottom, cursor: 'nwse-resize', pos: 'br' },
+      { x: midX,  y: bottom, cursor: 'ns-resize',   pos: 'bc' },
+      { x: left,  y: bottom, cursor: 'nesw-resize', pos: 'bl' },
+      { x: left,  y: midY,   cursor: 'ew-resize',   pos: 'ml' },
     ];
   }
 
@@ -77,7 +86,7 @@
               data-rotate-handle="true"
               style="cursor: crosshair;">
         {#if appState.tooltipsEnabled}
-          <title>Drag to rotate · Shift: snap {appState.rotationStep}° · [ ] keys</title>
+          <title>Drag to rotate · Shift: snap 15°</title>
         {/if}
       </circle>
       <!-- Rotation symbol inside handle -->

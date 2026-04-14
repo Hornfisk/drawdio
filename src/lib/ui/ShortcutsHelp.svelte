@@ -28,8 +28,6 @@
       { key: 'Ctrl+[',       desc: 'Send backward' },
       { key: 'Ctrl+Shift+]', desc: 'Bring to front' },
       { key: 'Ctrl+Shift+[', desc: 'Send to back' },
-      { key: ']',            desc: 'Rotate +step' },
-      { key: '[',            desc: 'Rotate −step' },
     ]},
     { category: 'View', items: [
       { key: 'G',       desc: 'Toggle grid' },

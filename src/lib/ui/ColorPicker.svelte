@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
 
   let {
     color,
@@ -95,6 +95,12 @@
     ctx.fillRect(0, 0, hueCanvas.width, hueCanvas.height);
   }
 
+  // Capture the original color once so Cancel/Escape can revert.
+  // untrack() avoids a reactivity warning about reading the $props value into a local const.
+  const originalColor = untrack(() => color);
+  let committed = false;
+  let userInteracted = $state(false);
+
   // --- Init ---
   onMount(() => {
     const [h, s, b] = hexToHsb(color);
@@ -103,6 +109,24 @@
     drawSB();
     drawHue();
   });
+
+  // Live preview: push every HSB change back to the caller so the canvas updates in real time.
+  // Gated on userInteracted so the initial mount doesn't echo onchange() back to the parent
+  // (which could ping-pong through the parent's reactivity and close the picker).
+  $effect(() => {
+    if (!userInteracted) return;
+    onchange(hsbToHex(hue, sat, bri));
+  });
+
+  function cancelColor() {
+    if (!committed && userInteracted) onchange(originalColor);
+    onclose();
+  }
+
+  function onKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Escape') { e.preventDefault(); cancelColor(); }
+    else if (e.key === 'Enter') { e.preventDefault(); applyColor(); }
+  }
 
   // Redraw SB when hue changes
   $effect(() => { void hue; drawSB(); });
@@ -116,13 +140,14 @@
 
   // --- Derived ---
   const currentHex = $derived(hsbToHex(hue, sat, bri));
-  const cursorX = $derived(sat * 180);
-  const cursorY = $derived((1 - bri) * 140);
-  const hueMarkerX = $derived((hue / 360) * 180);
+  const cursorX = $derived(sat * 160);
+  const cursorY = $derived((1 - bri) * 120);
+  const hueMarkerX = $derived((hue / 360) * 160);
 
   // --- SB drag ---
   function onSBDown(e: MouseEvent) {
     sbDragging = true;
+    userInteracted = true;
     updateSB(e);
   }
   function updateSB(e: MouseEvent) {
@@ -134,6 +159,7 @@
   // --- Hue drag ---
   function onHueDown(e: MouseEvent) {
     hueDragging = true;
+    userInteracted = true;
     updateHue(e);
   }
   function updateHue(e: MouseEvent) {
@@ -154,6 +180,7 @@
     hexInput = v;
     if (/^#[0-9a-fA-F]{6}$/.test(v)) {
       suppressHexSync = true;
+      userInteracted = true;
       const [h, s, b] = hexToHsb(v);
       hue = h; sat = s; bri = b;
       suppressHexSync = false;
@@ -162,27 +189,46 @@
 
   function applyColor() {
     onchange(currentHex);
+    committed = true;
     onclose();
+  }
+
+  const hasEyeDropper = typeof window !== 'undefined' && 'EyeDropper' in window;
+  async function pickFromScreen() {
+    try {
+      // @ts-expect-error EyeDropper is a Chromium-only global, not in lib.dom yet
+      const ed = new window.EyeDropper();
+      const result = await ed.open();
+      const hex: string = result.sRGBHex;
+      suppressHexSync = true;
+      userInteracted = true;
+      const [h, s, b] = hexToHsb(hex);
+      hue = h; sat = s; bri = b;
+      hexInput = hex;
+      suppressHexSync = false;
+    } catch {
+      // user cancelled or API unavailable
+    }
   }
 </script>
 
-<svelte:window onmousemove={onGlobalMove} onmouseup={onGlobalUp} />
+<svelte:window onmousemove={onGlobalMove} onmouseup={onGlobalUp} onkeydown={onKeyDown} />
 
-<!-- Invisible backdrop closes picker on outside click -->
-<div class="cp-backdrop" onclick={onclose} role="presentation"></div>
+<!-- Invisible backdrop: outside click reverts (treat as cancel) -->
+<div class="cp-backdrop" onclick={cancelColor} role="presentation"></div>
 
 <div class="cp-panel" style="left:{x}px; top:{y}px;" role="dialog" aria-label="Color picker">
 
   <!-- Saturation / Brightness gradient -->
   <div class="cp-sb-wrap">
-    <canvas bind:this={sbCanvas} width="180" height="140" class="cp-sb-canvas"
+    <canvas bind:this={sbCanvas} width="160" height="120" class="cp-sb-canvas"
             onmousedown={onSBDown}></canvas>
     <div class="cp-sb-cursor" style="left:{cursorX}px; top:{cursorY}px;"></div>
   </div>
 
   <!-- Hue bar -->
   <div class="cp-hue-wrap">
-    <canvas bind:this={hueCanvas} width="180" height="14" class="cp-hue-canvas"
+    <canvas bind:this={hueCanvas} width="160" height="14" class="cp-hue-canvas"
             onmousedown={onHueDown}></canvas>
     <div class="cp-hue-marker" style="left:{hueMarkerX}px;"></div>
   </div>
@@ -194,6 +240,18 @@
     <div class="cp-preview-new" style="background:{currentHex}" title="New color"></div>
     <input class="cp-hex-input" type="text" maxlength="7" spellcheck="false"
            value={hexInput} oninput={onHexKey} />
+    {#if hasEyeDropper}
+      <button class="cp-eyedropper" type="button" onclick={pickFromScreen}
+              title="Pick color from screen" aria-label="Pick color from screen">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="m2 22 1-1h3l9-9"/>
+          <path d="M3 21v-3l9-9"/>
+          <path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/>
+        </svg>
+      </button>
+    {/if}
   </div>
 
   <!-- Swatch save row -->
@@ -209,7 +267,7 @@
 
   <!-- Apply / Cancel -->
   <div class="cp-btn-row">
-    <button class="cp-btn cp-btn-cancel" onclick={onclose}>Cancel</button>
+    <button class="cp-btn cp-btn-cancel" onclick={cancelColor}>Cancel</button>
     <button class="cp-btn cp-btn-apply" onclick={applyColor}>Apply</button>
   </div>
 </div>
@@ -218,33 +276,34 @@
 .cp-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1999;
+  z-index: 9998;
 }
 .cp-panel {
   position: fixed;
-  z-index: 2000;
+  z-index: 9999;
   background: var(--bg-menu);
   border: 1px solid var(--border-strong);
   border-radius: 7px;
-  padding: 10px;
+  padding: 8px;
   box-shadow: 0 10px 28px rgba(0,0,0,0.65);
-  width: 200px;
+  width: 176px;
+  box-sizing: content-box;
   user-select: none;
 }
 
 /* SB gradient area */
 .cp-sb-wrap {
   position: relative;
-  width: 180px;
-  height: 140px;
+  width: 160px;
+  height: 120px;
   margin-bottom: 6px;
 }
 .cp-sb-canvas {
   display: block;
   border-radius: 4px;
   cursor: crosshair;
-  width: 180px;
-  height: 140px;
+  width: 160px;
+  height: 120px;
 }
 .cp-sb-cursor {
   position: absolute;
@@ -259,7 +318,7 @@
 /* Hue bar */
 .cp-hue-wrap {
   position: relative;
-  width: 180px;
+  width: 160px;
   height: 14px;
   margin-bottom: 9px;
 }
@@ -267,7 +326,7 @@
   display: block;
   border-radius: 3px;
   cursor: ew-resize;
-  width: 180px;
+  width: 160px;
   height: 14px;
 }
 .cp-hue-marker {
@@ -300,6 +359,7 @@
 }
 .cp-hex-input {
   flex: 1;
+  min-width: 0;
   background: var(--bg-input);
   color: var(--text);
   border: 1px solid var(--border-muted);
@@ -311,6 +371,21 @@
   -webkit-user-select: text;
 }
 .cp-hex-input:focus { outline: 1px solid var(--accent); }
+.cp-eyedropper {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-input);
+  border: 1px solid var(--border-muted);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.cp-eyedropper:hover { color: var(--text); border-color: var(--text-muted); }
 
 /* Swatch save row */
 .cp-swatch-row {
@@ -328,17 +403,17 @@
   margin-right: 1px;
 }
 .cp-mini-swatch {
-  width: 16px; height: 16px;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 16px;
   border-radius: 2px;
   border: 1.5px solid var(--border);
   cursor: pointer;
-  flex-shrink: 0;
-  transition: border-color 0.1s, transform 0.1s;
+  transition: border-color 0.1s;
   padding: 0;
 }
 .cp-mini-swatch:hover {
   border-color: var(--text);
-  transform: scale(1.25);
 }
 .cp-reset-btn {
   font-size: 12px;

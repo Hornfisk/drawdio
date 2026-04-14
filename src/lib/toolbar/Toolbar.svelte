@@ -3,6 +3,7 @@
   import { newProject, save, saveAs, openProject, restoreFromAutosave } from '../io/serialization.js';
   import { exportPNG, exportSVG, copyJSONToClipboard } from '../io/export.js';
   import { pickRefImageFromFile } from '../io/refImage.js';
+  import ColorField from '../ui/ColorField.svelte';
 
   let menuOpen = $state(false);
 
@@ -140,17 +141,9 @@
           {/each}
         </div>
         <div class="toolbar-color-custom">
-          <label class="toolbar-color-custom-label" for="toolbar-accent-hex">Hex</label>
-          <input id="toolbar-accent-hex" class="toolbar-color-hex-input" type="text"
-                 maxlength="7" spellcheck="false"
-                 value={appState.accentColor}
-                 oninput={(e) => {
-                   const v = (e.target as HTMLInputElement).value;
-                   if (/^#[0-9a-fA-F]{6}$/.test(v)) appState.accentColor = v;
-                 }} />
-          <input class="toolbar-color-native" type="color"
-                 value={appState.accentColor}
-                 oninput={(e) => { appState.accentColor = (e.target as HTMLInputElement).value; }} />
+          <span class="toolbar-color-custom-label">Hex</span>
+          <ColorField color={appState.accentColor}
+                      onchange={(hex) => { appState.accentColor = hex; }} />
         </div>
 
         <div class="toolbar-dropdown-sep"></div>
@@ -215,18 +208,5 @@
       title="Toggle grid (G)"
       onclick={() => appState.gridVisible = !appState.gridVisible}
     >Grid</button>
-    <label class="toolbar-info toolbar-step-label" for="toolbar-rot-step" title="Rotation step for [ ] keys (Shift: always ±45°)">°step</label>
-    <input
-      id="toolbar-rot-step"
-      class="toolbar-input-sm"
-      type="number"
-      min="1" max="180" step="1"
-      title="Rotation step for [ ] keys (Shift: always ±45°)"
-      value={appState.rotationStep}
-      oninput={(e) => {
-        const v = Math.max(1, Math.min(180, Number((e.target as HTMLInputElement).value)));
-        if (!isNaN(v)) appState.rotationStep = v;
-      }}
-    />
   </div>
 </div>

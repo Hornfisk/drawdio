@@ -10,10 +10,86 @@
   import SelectionHandles from './SelectionHandles.svelte';
   import RubberBand from './RubberBand.svelte';
   import { initDrag } from '../interaction/drag.svelte.js';
+  import { eyedropperState, cancelPick, completePick } from '../ui/eyedropper.svelte.js';
 
   let svgEl: SVGSVGElement;
   let containerEl: HTMLDivElement;
   let dragOver = $state(false);
+  let pickImageData: ImageData | null = null;
+  let pickCanvasSize = { w: 0, h: 0 };
+
+  function rasterizeSvg(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const svgMarkup = new XMLSerializer().serializeToString(svgEl);
+      const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const w = appState.canvasWidth;
+        const h = appState.canvasHeight;
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        if (!ctx) { URL.revokeObjectURL(url); reject(new Error('no 2d ctx')); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        try {
+          pickImageData = ctx.getImageData(0, 0, w, h);
+          pickCanvasSize = { w, h };
+        } catch (err) {
+          URL.revokeObjectURL(url); reject(err); return;
+        }
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+      img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+      img.src = url;
+    });
+  }
+
+  function sampleAt(clientX: number, clientY: number): string | null {
+    if (!pickImageData) return null;
+    const rect = svgEl.getBoundingClientRect();
+    // The rasterized SVG baked in the current viewBox, so the canvas (canvasWidth×canvasHeight)
+    // already maps 1:1 to what the user sees. Direct proportional mapping.
+    const px = Math.floor(((clientX - rect.left) / rect.width) * pickCanvasSize.w);
+    const py = Math.floor(((clientY - rect.top) / rect.height) * pickCanvasSize.h);
+    if (px < 0 || py < 0 || px >= pickCanvasSize.w || py >= pickCanvasSize.h) return null;
+    const i = (py * pickCanvasSize.w + px) * 4;
+    const r = pickImageData.data[i];
+    const g = pickImageData.data[i + 1];
+    const b = pickImageData.data[i + 2];
+    return '#' + [r, g, b].map(n => n.toString(16).padStart(2, '0')).join('');
+  }
+
+  function onPickDown(e: PointerEvent) {
+    if (!eyedropperState.active) return;
+    e.stopPropagation();
+    e.preventDefault();
+    if (e.button !== 0) { // right/middle → cancel
+      pickImageData = null;
+      cancelPick();
+      return;
+    }
+    const hex = sampleAt(e.clientX, e.clientY);
+    pickImageData = null;
+    if (hex) completePick(hex); else cancelPick();
+  }
+
+  function onPickKey(e: KeyboardEvent) {
+    if (!eyedropperState.active) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      pickImageData = null;
+      cancelPick();
+    }
+  }
+
+  $effect(() => {
+    if (eyedropperState.active) {
+      // Rasterize once when entering pick mode.
+      rasterizeSvg().catch(() => { cancelPick(); });
+    }
+  });
 
   const viewBox = $derived(
     `${appState.panX} ${appState.panY} ${appState.canvasWidth / appState.zoom} ${appState.canvasHeight / appState.zoom}`
@@ -68,9 +144,12 @@
   }
 </script>
 
+<svelte:window onkeydown={onPickKey} />
 <div class="canvas-container" bind:this={containerEl}
      role="application" aria-label="Design canvas"
+     tabindex="-1"
      class:ref-drag-over={dragOver}
+     class:picking={eyedropperState.active}
      ondragover={onDragOver}
      ondragleave={onDragLeave}
      ondrop={onDrop}>
@@ -142,4 +221,11 @@
       <RubberBand />
     </g>
   </svg>
+
+  {#if eyedropperState.active}
+    <div class="pick-overlay"
+         role="presentation"
+         onpointerdown={onPickDown}
+         oncontextmenu={(e) => { e.preventDefault(); cancelPick(); pickImageData = null; }}></div>
+  {/if}
 </div>

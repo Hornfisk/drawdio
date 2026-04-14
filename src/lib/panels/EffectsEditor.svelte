@@ -2,6 +2,7 @@
   import type { ComponentData, EffectKey } from '../components/types.js';
   import { appState } from '../state/app.svelte.js';
   import CollapsibleSection from './CollapsibleSection.svelte';
+  import ColorField from '../ui/ColorField.svelte';
 
   let { data }: { data: ComponentData } = $props();
 
@@ -47,13 +48,15 @@
       {#if key === 'gradient_fill' && effect.enabled}
         <div class="props-row" style="margin-left: 20px;">
           <span class="props-label">From</span>
-          <input class="props-input props-input-sm" type="color"
-                 value={data.effects.gradient_fill.startColor}
-                 oninput={(e) => { data.effects.gradient_fill.startColor = (e.target as HTMLInputElement).value; appState.isDirty = true; }} />
+          <ColorField compact={true}
+                      color={data.effects.gradient_fill.startColor}
+                      onchange={(hex) => { data.effects.gradient_fill.startColor = hex; appState.isDirty = true; }} />
+        </div>
+        <div class="props-row" style="margin-left: 20px;">
           <span class="props-label">To</span>
-          <input class="props-input props-input-sm" type="color"
-                 value={data.effects.gradient_fill.endColor}
-                 oninput={(e) => { data.effects.gradient_fill.endColor = (e.target as HTMLInputElement).value; appState.isDirty = true; }} />
+          <ColorField compact={true}
+                      color={data.effects.gradient_fill.endColor}
+                      onchange={(hex) => { data.effects.gradient_fill.endColor = hex; appState.isDirty = true; }} />
         </div>
         <div class="props-row" style="margin-left: 20px;">
           <span class="props-label">Angle</span>

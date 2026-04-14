@@ -265,8 +265,7 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       const delta = currentAngle - rotateStartAngle;
       let newRotation = normalizeAngle(rotateStartValue + delta);
       if (e.shiftKey) {
-        const step = appState.rotationStep || 15;
-        newRotation = Math.round(newRotation / step) * step;
+        newRotation = Math.round(newRotation / 15) * 15;
       }
       const comp = appState.components.find(c => c.id === rotatingId);
       if (comp) {
@@ -298,11 +297,31 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
         }
       }
 
-      const snapped = snap(newX, newY);
+      // Snap only the moving edges — snapping the anchored edge would shift the whole item.
+      // Alt disables snapping for pixel-perfect resize.
+      if (appState.snapEnabled && !altHeld) {
+        const g = appState.gridSize;
+        if (resizeHandle.includes('l')) {
+          const sx = Math.round(newX / g) * g;
+          newW = Math.max(10, newW + (newX - sx));
+          newX = sx;
+        } else if (resizeHandle.includes('r')) {
+          const right = newX + newW;
+          newW = Math.max(10, Math.round(right / g) * g - newX);
+        }
+        if (resizeHandle.includes('t')) {
+          const sy = Math.round(newY / g) * g;
+          newH = Math.max(10, newH + (newY - sy));
+          newY = sy;
+        } else if (resizeHandle.includes('b')) {
+          const bottom = newY + newH;
+          newH = Math.max(10, Math.round(bottom / g) * g - newY);
+        }
+      }
       const comp = appState.components.find(c => c.id === movingIds[0]);
       if (comp) {
-        comp.x = snapped.x;
-        comp.y = snapped.y;
+        comp.x = newX;
+        comp.y = newY;
         comp.width = Math.round(newW);
         comp.height = Math.round(newH);
       }
