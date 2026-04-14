@@ -48,8 +48,7 @@
           seen.add(vg);
           const allVariants = (categories.get(cat) || []).filter(i => i.entry.variantGroup === vg);
           const variants = allVariants.map(v => ({ type: v.type, label: v.entry.variantLabel || v.entry.displayName }));
-          if (!activeVariants.has(vg)) activeVariants.set(vg, allVariants[0].type);
-          const activeType = activeVariants.get(vg)!;
+          const activeType = activeVariants.get(vg) ?? allVariants[0].type;
           const activeItem = allVariants.find(v => v.type === activeType) || allVariants[0];
           display.push({ type: activeItem.type, entry: activeItem.entry, variants });
         } else {
@@ -60,6 +59,18 @@
       result.set(cat, display);
     }
     return result;
+  });
+
+  // Lazily initialise missing variant selections whenever categories change.
+  $effect(() => {
+    for (const [, items] of categories) {
+      for (const item of items) {
+        const vg = item.entry.variantGroup;
+        if (vg && !activeVariants.has(vg)) {
+          activeVariants = new Map(activeVariants).set(vg, item.type);
+        }
+      }
+    }
   });
 
   function setVariant(group: string, type: string) {
@@ -206,7 +217,7 @@
         const reader = new FileReader();
         reader.onload = () => {
           const asset: UserAsset = {
-            id: `asset_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+            id: crypto.randomUUID(),
             name: file.name.replace(/\.[^.]+$/, ''),
             dataUrl: reader.result as string,
           };
