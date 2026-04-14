@@ -12,6 +12,9 @@ export function toJSON() {
       height: appState.canvasHeight,
       bgColor: appState.bgColor,
       gridSize: appState.gridSize,
+      refImageDataUrl: appState.refImageDataUrl,
+      refImageOpacity: appState.refImageOpacity,
+      refImageVisible: appState.refImageVisible,
     },
     components: structuredClone(appState.components),
     groups: structuredClone(appState.groups),
@@ -29,7 +32,10 @@ export function fromJSON(json: Record<string, unknown>) {
   }
   const data = json as {
     drawdio_version: number;
-    canvas?: { width?: number; height?: number; bgColor?: string; gridSize?: number };
+    canvas?: {
+      width?: number; height?: number; bgColor?: string; gridSize?: number;
+      refImageDataUrl?: string | null; refImageOpacity?: number; refImageVisible?: boolean;
+    };
     components?: ComponentData[];
     groups?: Group[];
   };
@@ -46,6 +52,9 @@ export function fromJSON(json: Record<string, unknown>) {
     appState.canvasHeight = data.canvas.height || 600;
     appState.bgColor = data.canvas.bgColor || '#1a1a1a';
     appState.gridSize = data.canvas.gridSize || 20;
+    appState.refImageDataUrl = data.canvas.refImageDataUrl ?? null;
+    appState.refImageOpacity = data.canvas.refImageOpacity ?? 0.5;
+    appState.refImageVisible = data.canvas.refImageVisible ?? true;
   }
 
   if (data.components) {
@@ -74,7 +83,7 @@ export function newProject() {
   }
   fromJSON({
     drawdio_version: 1,
-    canvas: { width: 900, height: 600, bgColor: '#1a1a1a', gridSize: 20 },
+    canvas: { width: 900, height: 600, bgColor: '#1a1a1a', gridSize: 20, refImageDataUrl: null },
     components: [],
     groups: [],
   });

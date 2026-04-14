@@ -13,6 +13,7 @@
 
   let svgEl: SVGSVGElement;
   let containerEl: HTMLDivElement;
+  let dragOver = $state(false);
 
   const viewBox = $derived(
     `${appState.panX} ${appState.panY} ${appState.canvasWidth / appState.zoom} ${appState.canvasHeight / appState.zoom}`
@@ -22,9 +23,57 @@
     const cleanup = initDrag(svgEl, containerEl);
     return cleanup;
   });
+
+  function loadRefImage(file: File) {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      // Measure natural dimensions before committing
+      const img = new Image();
+      img.onload = () => {
+        if (appState.components.length > 0) {
+          if (!confirm(`Resize canvas to ${img.naturalWidth}×${img.naturalHeight}px? Existing components will remain at their current positions.`)) {
+            appState.refImageDataUrl = dataUrl;
+            appState.refImageVisible = true;
+            appState.isDirty = true;
+            return;
+          }
+        }
+        appState.canvasWidth = img.naturalWidth;
+        appState.canvasHeight = img.naturalHeight;
+        appState.refImageDataUrl = dataUrl;
+        appState.refImageVisible = true;
+        appState.isDirty = true;
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function onDragOver(e: DragEvent) {
+    if (!e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    dragOver = true;
+  }
+
+  function onDragLeave() { dragOver = false; }
+
+  function onDrop(e: DragEvent) {
+    e.preventDefault();
+    dragOver = false;
+    const file = e.dataTransfer?.files[0];
+    if (file) loadRefImage(file);
+  }
 </script>
 
-<div class="canvas-container" bind:this={containerEl}>
+<div class="canvas-container" bind:this={containerEl}
+     role="application" aria-label="Design canvas"
+     class:ref-drag-over={dragOver}
+     ondragover={onDragOver}
+     ondragleave={onDragLeave}
+     ondrop={onDrop}>
   {#if appState.placingType}
     {@const entry = getEntry(appState.placingType)}
     <div class="placement-chip" role="status" aria-live="polite">
@@ -57,6 +106,18 @@
       height={appState.canvasHeight}
       fill={appState.bgColor}
     />
+
+    <!-- Reference image (excluded from exports) -->
+    {#if appState.refImageDataUrl && appState.refImageVisible}
+      <image id="ref-image"
+             href={appState.refImageDataUrl}
+             x="0" y="0"
+             width={appState.canvasWidth}
+             height={appState.canvasHeight}
+             opacity={appState.refImageOpacity}
+             preserveAspectRatio="xMidYMid slice"
+             style="pointer-events: none;" />
+    {/if}
 
     <!-- Grid overlay -->
     <rect
