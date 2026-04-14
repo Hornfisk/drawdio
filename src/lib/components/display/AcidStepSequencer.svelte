@@ -54,21 +54,21 @@
     <rect x={cx + 1} y="1" width={tW} height={toggleRowH - 2} rx="1"
           style="fill: {step.accent ? '#c42a2a' : 'var(--component-inactive)'};"  />
     <text x={cx + 1 + tW / 2} y={1 + (toggleRowH - 2) * 0.73} text-anchor="middle"
-          fill={step.accent ? '#fff' : '#555'} font-size={tFsz} font-family="monospace">A</text>
+          style="fill: {step.accent ? '#fff' : 'var(--component-label)'};" font-size={tFsz} font-family="monospace">A</text>
 
     <!-- S toggle (slide) -->
     {@const s1x = cx + 1 + tW + 1}
     <rect x={s1x} y="1" width={tW} height={toggleRowH - 2} rx="1"
           style="fill: {step.slide ? '#f0dc3c' : 'var(--component-inactive)'};" />
     <text x={s1x + tW / 2} y={1 + (toggleRowH - 2) * 0.73} text-anchor="middle"
-          fill={step.slide ? '#141416' : '#555'} font-size={tFsz} font-family="monospace">S</text>
+          style="fill: {step.slide ? '#141416' : 'var(--component-label)'};" font-size={tFsz} font-family="monospace">S</text>
 
     <!-- R toggle (rest) -->
     {@const s2x = cx + 1 + (tW + 1) * 2}
     <rect x={s2x} y="1" width={tW} height={toggleRowH - 2} rx="1"
           style="fill: {step.rest ? '#d6d6da' : 'var(--component-inactive)'};" />
     <text x={s2x + tW / 2} y={1 + (toggleRowH - 2) * 0.73} text-anchor="middle"
-          fill={step.rest ? '#141416' : '#555'} font-size={tFsz} font-family="monospace">R</text>
+          style="fill: {step.rest ? '#141416' : 'var(--component-label)'};" font-size={tFsz} font-family="monospace">R</text>
 
     <!-- Pitch slider track -->
     {@const trackX = cx + cellW / 2 - trackW / 2}
@@ -80,12 +80,11 @@
       {@const ty = thumbY(step.semitone)}
       <rect x={cx + cellW / 2 - thumbW / 2} y={ty} width={thumbW} height={thumbH}
             rx="1"
-            fill={step.accent ? '#782818' : '#bababc'}
-            stroke={step.accent ? '#c42a2a' : '#d6d6da'} stroke-width="0.5"/>
+            style="fill: {step.accent ? '#782818' : 'var(--component-inactive)'}; stroke: {step.accent ? '#c42a2a' : '#d6d6da'}; stroke-width: 0.5;"/>
     {/if}
 
     <!-- Step number -->
     <text x={cx + cellW / 2} y={data.height - 1} text-anchor="middle"
-          fill={isQ ? '#888' : '#444'} font-size={nFsz} font-family="monospace">{i + 1}</text>
+          style="fill: var(--component-label);" font-size={nFsz} font-family="monospace">{i + 1}</text>
   {/each}
 </g>
