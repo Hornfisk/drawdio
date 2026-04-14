@@ -34,4 +34,5 @@ export const appState = $state({
   accentColor: '#4fc3f7',
   theme: 'dark' as 'dark' | 'light',
   userAssets: [] as UserAsset[],
+  showShortcutsHelp: false,
 });
