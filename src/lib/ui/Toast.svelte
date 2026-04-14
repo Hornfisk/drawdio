@@ -3,7 +3,7 @@
 </script>
 
 {#if toastState.toasts.length > 0}
-  <div class="toast-container" aria-live="off" aria-atomic="false">
+  <div class="toast-container" aria-live="polite" aria-atomic="false">
     {#each toastState.toasts as toast (toast.id)}
       <div class="toast">{toast.message}</div>
     {/each}

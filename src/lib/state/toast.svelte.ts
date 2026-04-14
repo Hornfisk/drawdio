@@ -18,7 +18,11 @@ export function showToast(message: string, durationMs = 2500): void {
 
   // Also announce to screen reader via the status region
   const statusEl = document.getElementById('app-status');
-  if (statusEl) statusEl.textContent = message;
+  if (statusEl) {
+    statusEl.textContent = message;
+  } else if (import.meta.env.DEV) {
+    console.warn('[toast] #app-status not found; SR announcement skipped');
+  }
 
   setTimeout(() => {
     _toasts = _toasts.filter(t => t.id !== id);
