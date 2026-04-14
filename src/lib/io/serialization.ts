@@ -13,14 +13,18 @@ export function toJSON() {
       bgColor: appState.bgColor,
       gridSize: appState.gridSize,
     },
-    components: JSON.parse(JSON.stringify(appState.components)),
-    groups: JSON.parse(JSON.stringify(appState.groups)),
+    components: structuredClone(appState.components),
+    groups: structuredClone(appState.groups),
   };
 }
 
 export function fromJSON(json: Record<string, unknown>) {
-  if (!json || !(json as { drawdio_version?: number }).drawdio_version) {
-    alert('Invalid Drawdio file.');
+  if (!json || typeof json.drawdio_version !== 'number') {
+    alert('Invalid Drawdio file: missing version field.');
+    return;
+  }
+  if (!Array.isArray(json.components) || !Array.isArray(json.groups)) {
+    alert('Invalid Drawdio file: malformed components or groups.');
     return;
   }
   const data = json as {
@@ -108,7 +112,7 @@ export function loadFromFile(file: File) {
       appState.fileName = file.name;
       document.title = 'Drawdio \u2014 ' + file.name;
     } catch (err) {
-      alert('Failed to load file: ' + (err as Error).message);
+      alert(`Failed to load "${file.name}": ${(err as Error).message}`);
     }
   };
   reader.readAsText(file);
