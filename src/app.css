@@ -70,7 +70,7 @@ body {
   border-radius: 4px;
   font-size: 12px;
   font-family: monospace;
-  width: 36px;
+  width: 46px;
   text-align: center;
 }
 .toolbar-input-sm:focus { outline: 1px solid var(--accent); }
@@ -529,7 +529,7 @@ body {
 }
 .toolbar-dropdown-shortcut { color: #666; font-size: 11px; margin-left: 16px; }
 .toolbar-hamburger { font-size: 16px; padding: 4px 10px; line-height: 1; }
-.toolbar-hamburger-menu { min-width: 220px; }
+.toolbar-hamburger-menu { min-width: 220px; max-height: calc(100vh - 50px); overflow-y: auto; }
 .toolbar-menu-section-label {
   font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
   color: #555; padding: 6px 14px 2px; pointer-events: none;
