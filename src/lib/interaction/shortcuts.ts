@@ -203,6 +203,13 @@ export function initShortcuts(): () => void {
       e.preventDefault();
       return;
     }
+
+    // ? — toggle shortcuts help
+    if (key === '?' || (key === '/' && shift)) {
+      appState.showShortcutsHelp = !appState.showShortcutsHelp;
+      e.preventDefault();
+      return;
+    }
   }
 
   window.addEventListener('keydown', onKeyDown);
