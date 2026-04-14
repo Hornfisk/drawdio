@@ -16,7 +16,7 @@
   <!-- Track background -->
   <rect x={thumbR} y={trackY - trackH / 2}
         width={trackWidth} height={trackH}
-        rx={trackH / 2} fill="#2a2a3a" />
+        rx={trackH / 2} style="fill: var(--component-bg-alt);" />
 
   <!-- Filled portion -->
   <rect x={thumbR} y={trackY - trackH / 2}
@@ -25,11 +25,11 @@
 
   <!-- Thumb -->
   <circle cx={thumbCx} cy={trackY} r={thumbR}
-          fill="#ddd" stroke={data.color} stroke-width="1.5" />
+          style="fill: var(--key-white);" stroke={data.color} stroke-width="1.5" />
 
   <!-- Label -->
   {#if data.label}
-    <text x={data.width / 2} y={data.height - 2} text-anchor="middle" fill="#aaa"
+    <text x={data.width / 2} y={data.height - 2} text-anchor="middle" style="fill: var(--component-label);"
           font-size="10" font-family="system-ui, sans-serif">{data.label}</text>
   {/if}
 

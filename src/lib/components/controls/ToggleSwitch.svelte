@@ -17,9 +17,9 @@
         fill-opacity={isOn ? 0.4 : 1}
         stroke={data.color} stroke-width="1" />
   <circle cx={thumbX} cy={r} r={thumbR}
-          fill={isOn ? data.color : '#888'} />
+          style="fill: {isOn ? data.color : 'var(--component-label)'};" />
   {#if data.label}
-    <text x={pillW / 2} y={data.height - 2} text-anchor="middle" fill="#aaa"
+    <text x={pillW / 2} y={data.height - 2} text-anchor="middle" style="fill: var(--component-label);"
           font-size="10" font-family="system-ui, sans-serif">{data.label}</text>
   {/if}
   <rect x="0" y="0" width={data.width} height={data.height} fill="transparent" />

@@ -34,20 +34,20 @@
 <g>
   <!-- Keyboard body background -->
   <rect x="0" y="0" width={data.width} height={data.height}
-        rx="2" fill="#1a1a1e" stroke="#333" stroke-width="0.5"/>
+        rx="2" style="fill: var(--component-bg);" stroke="#333" stroke-width="0.5"/>
 
   <!-- Side strips: pitch bend then mod wheel -->
   {#if hasPB}
     {@const sx = 0}
     <!-- PB strip -->
     <rect x={sx} y="0" width={sideW} height={data.height}
-          rx="1" fill="#111" stroke="#2a2a2a" stroke-width="0.5"/>
+          rx="1" style="fill: var(--key-black);" stroke="#2a2a2a" stroke-width="0.5"/>
     <!-- PB label -->
     <text x={sx + sideW / 2} y={data.height * 0.22} text-anchor="middle"
-          fill="#555" font-size={Math.min(6, sideW * 0.45)} font-family="monospace">PB</text>
+          style="fill: var(--component-label);" font-size={Math.min(6, sideW * 0.45)} font-family="monospace">PB</text>
     <!-- PB track -->
     <rect x={sx + sideW * 0.35} y={data.height * 0.28} width={sideW * 0.3} height={data.height * 0.6}
-          rx="1" fill="#0d0d0f" stroke="#333" stroke-width="0.5"/>
+          rx="1" style="fill: var(--component-bg);" stroke="#333" stroke-width="0.5"/>
     <!-- PB thumb (center = neutral) -->
     <rect x={sx + sideW * 0.2} y={data.height * 0.28 + data.height * 0.6 * 0.5 - 3}
           width={sideW * 0.6} height={Math.max(4, data.height * 0.08)} rx="1"
@@ -58,13 +58,13 @@
     {@const sx = hasPB ? sideW : 0}
     <!-- MW strip -->
     <rect x={sx} y="0" width={sideW} height={data.height}
-          rx="1" fill="#111" stroke="#2a2a2a" stroke-width="0.5"/>
+          rx="1" style="fill: var(--key-black);" stroke="#2a2a2a" stroke-width="0.5"/>
     <!-- MW label -->
     <text x={sx + sideW / 2} y={data.height * 0.22} text-anchor="middle"
-          fill="#555" font-size={Math.min(6, sideW * 0.45)} font-family="monospace">MW</text>
+          style="fill: var(--component-label);" font-size={Math.min(6, sideW * 0.45)} font-family="monospace">MW</text>
     <!-- MW track -->
     <rect x={sx + sideW * 0.35} y={data.height * 0.28} width={sideW * 0.3} height={data.height * 0.6}
-          rx="1" fill="#0d0d0f" stroke="#333" stroke-width="0.5"/>
+          rx="1" style="fill: var(--component-bg);" stroke="#333" stroke-width="0.5"/>
     <!-- MW thumb (bottom = 0) -->
     <rect x={sx + sideW * 0.2} y={data.height * 0.28 + data.height * 0.6 * 0.8 - 3}
           width={sideW * 0.6} height={Math.max(4, data.height * 0.08)} rx="1"
@@ -76,10 +76,10 @@
     {@const wx = keysX + wi * wkW}
     {@const isC = wi % 7 === 0}
     <rect x={wx + 0.5} y="0" width={wkW - 1} height={wkH}
-          rx="1" fill="#e8e8e4" stroke="#555" stroke-width="0.5"/>
+          rx="1" style="fill: var(--key-white);" stroke="#555" stroke-width="0.5"/>
     {#if isC}
       <text x={wx + wkW / 2} y={labelY} text-anchor="middle"
-            fill="#888" font-size={labelFsz} font-family="monospace">C</text>
+            style="fill: var(--component-label);" font-size={labelFsz} font-family="monospace">C</text>
     {/if}
   {/each}
 
@@ -90,7 +90,7 @@
         {@const wi = oct * 7 + slot}
         {@const bx = keysX + wi * wkW + wkW - bkW / 2}
         <rect x={bx} y="0" width={bkW} height={bkH}
-              rx="1" fill="#1a1a1a" stroke="#000" stroke-width="0.5"/>
+              rx="1" style="fill: var(--key-black);" stroke="#000" stroke-width="0.5"/>
         <!-- Subtle highlight on black key -->
         <rect x={bx + bkW * 0.2} y={bkH * 0.05} width={bkW * 0.25} height={bkH * 0.55}
               rx="0.5" fill="#fff" fill-opacity="0.06"/>
@@ -99,7 +99,7 @@
   {/each}
 
   <!-- Port indicator -->
-  <text x={keysX + 3} y={portsPos === 'front' ? data.height - 4 : 4} fill="#555"
+  <text x={keysX + 3} y={portsPos === 'front' ? data.height - 4 : 4} style="fill: var(--component-label);"
         font-size={Math.min(8, data.height * 0.1)} font-family="monospace"
         dominant-baseline={portsPos === 'front' ? 'auto' : 'hanging'}>⊕</text>
 </g>
