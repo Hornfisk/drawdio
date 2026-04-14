@@ -4,9 +4,12 @@ import { doCopy, doCut, doPaste, doDuplicate } from '../state/clipboard.js';
 import { undo, redo } from '../state/history.js';
 import { createGroup, ungroupSelected } from '../state/groups.js';
 import { bringForward, sendBackward, bringToFront, sendToBack } from '../state/zorder.js';
-import { save } from '../io/serialization.js';
+import { save, openProject } from '../io/serialization.js';
 import { exportPNG, exportSVG, copyJSONToClipboard } from '../io/export.js';
 import { rotateSelectedBy } from '../state/actions.js';
+import { pushHistory } from '../state/history.js';
+import { expandSelection } from '../state/groups.js';
+import { pasteImageAsComponent, setRefImageFromDataUrl } from '../io/refImage.js';
 
 export function initShortcuts(): () => void {
   function onKeyDown(e: KeyboardEvent) {
@@ -89,12 +92,30 @@ export function initShortcuts(): () => void {
       return;
     }
 
-    // Ctrl+V — paste
-    if (key === 'v' && ctrl) {
-      doPaste();
+    // Ctrl+Shift+V — paste clipboard image as reference image
+    if (key === 'v' && ctrl && shift) {
+      (async () => {
+        try {
+          const items = await navigator.clipboard.read();
+          for (const item of items) {
+            const type = item.types.find(t => t.startsWith('image/'));
+            if (type) {
+              const blob = await item.getType(type);
+              const reader = new FileReader();
+              reader.onload = () => setRefImageFromDataUrl(reader.result as string);
+              reader.readAsDataURL(blob);
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn('Clipboard read failed:', err);
+        }
+      })();
       e.preventDefault();
       return;
     }
+
+    // Ctrl+V — handled by the `paste` event listener below (image or components)
 
     // Ctrl+X — cut
     if (key === 'x' && ctrl) {
@@ -154,7 +175,7 @@ export function initShortcuts(): () => void {
 
     // Ctrl+O — open
     if (key === 'o' && ctrl) {
-      document.getElementById('file-input')?.click();
+      openProject();
       e.preventDefault();
       return;
     }
@@ -196,6 +217,26 @@ export function initShortcuts(): () => void {
       return;
     }
 
+    // Arrow keys — nudge selection (1px, Shift: 10px)
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      if (appState.selectedIds.length === 0) return;
+      const step = shift ? 10 : 1;
+      let dx = 0, dy = 0;
+      if (e.key === 'ArrowLeft') dx = -step;
+      else if (e.key === 'ArrowRight') dx = step;
+      else if (e.key === 'ArrowUp') dy = -step;
+      else dy = step;
+      pushHistory();
+      const ids = expandSelection([...appState.selectedIds]);
+      for (const id of ids) {
+        const comp = appState.components.find(c => c.id === id);
+        if (comp) { comp.x += dx; comp.y += dy; }
+      }
+      appState.isDirty = true;
+      e.preventDefault();
+      return;
+    }
+
     // Escape — clear selection, cancel placing
     if (key === 'escape') {
       clearSelection();
@@ -212,6 +253,35 @@ export function initShortcuts(): () => void {
     }
   }
 
+  function onPaste(e: ClipboardEvent) {
+    const target = e.target as Element | null;
+    const tag = target?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+    const items = e.clipboardData?.items;
+    if (items) {
+      for (const item of items) {
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (!file) continue;
+          const reader = new FileReader();
+          const name = file.name.replace(/\.[^.]+$/, '') || 'Pasted Image';
+          reader.onload = () => pasteImageAsComponent(reader.result as string, name);
+          reader.readAsDataURL(file);
+          e.preventDefault();
+          return;
+        }
+      }
+    }
+    // No image — fall back to component paste
+    doPaste();
+    e.preventDefault();
+  }
+
   window.addEventListener('keydown', onKeyDown);
-  return () => window.removeEventListener('keydown', onKeyDown);
+  window.addEventListener('paste', onPaste);
+  return () => {
+    window.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('paste', onPaste);
+  };
 }

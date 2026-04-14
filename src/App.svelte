@@ -24,6 +24,8 @@
   });
 
   let leftPanelWidth = $state(180);
+  let leftPanelVisible = $state(true);
+  let rightPanelVisible = $state(true);
   const LEFT_MIN = 120;
   const LEFT_MAX = 400;
 
@@ -56,23 +58,65 @@
 <!-- App body -->
 <div id="app-layout">
   <!-- Left panel (palette) -->
-  <div class="left-panel" style="width: {leftPanelWidth}px;">
-    <Palette />
-    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-    <div class="panel-resize-handle" role="separator" aria-label="Resize panel"
-         onmousedown={onResizeMouseDown}></div>
-  </div>
+  {#if leftPanelVisible}
+    <div class="left-panel" style="width: {leftPanelWidth}px;">
+      <div class="panel-header">
+        <button class="panel-toggle-btn" title="Hide left panel"
+                aria-label="Hide left panel"
+                onclick={() => leftPanelVisible = false}>
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+            <rect x="2" y="3" width="16" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="4" y="5" width="4" height="10" rx="1" ry="1" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+      <Palette />
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+      <div class="panel-resize-handle" role="separator" aria-label="Resize panel"
+           onmousedown={onResizeMouseDown}></div>
+    </div>
+  {:else}
+    <button class="panel-reopen left" title="Show left panel"
+            aria-label="Show left panel"
+            onclick={() => leftPanelVisible = true}>
+      <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+        <rect x="2" y="3" width="16" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="4" y="5" width="4" height="10" rx="1" ry="1" fill="currentColor"/>
+      </svg>
+    </button>
+  {/if}
 
   <!-- Canvas -->
   <Canvas />
 
   <!-- Right panel (properties + layers) -->
-  <div class="right-panel">
-    <div class="properties-panel">
-      <PropertiesPanel />
+  {#if rightPanelVisible}
+    <div class="right-panel">
+      <div class="panel-header right">
+        <button class="panel-toggle-btn" title="Hide right panel"
+                aria-label="Hide right panel"
+                onclick={() => rightPanelVisible = false}>
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+            <rect x="2" y="3" width="16" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="12" y="5" width="4" height="10" rx="1" ry="1" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+      <div class="properties-panel">
+        <PropertiesPanel />
+      </div>
+      <LayersPanel />
     </div>
-    <LayersPanel />
-  </div>
+  {:else}
+    <button class="panel-reopen right" title="Show right panel"
+            aria-label="Show right panel"
+            onclick={() => rightPanelVisible = true}>
+      <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+        <rect x="2" y="3" width="16" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="12" y="5" width="4" height="10" rx="1" ry="1" fill="currentColor"/>
+      </svg>
+    </button>
+  {/if}
 </div>
 
 <ContextMenu />

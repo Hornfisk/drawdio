@@ -197,14 +197,58 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       hasMoved = true;
       const dx = pt.x - startX;
       const dy = pt.y - startY;
+
+      // Compute group-wide alignment snap delta from the first moving component.
+      // Candidates: left/center/right x and top/center/bottom y of all non-moving components.
+      let alignDx: number | null = null, alignDy: number | null = null;
+      if (!altHeld && movingStarts.length > 0) {
+        const movingSet = new Set(movingIds);
+        const ref = movingStarts[0];
+        const refComp = appState.components.find(c => c.id === ref.id);
+        if (refComp) {
+          const w = refComp.width, h = refComp.height;
+          const targetX = ref.x + dx;
+          const targetY = ref.y + dy;
+          const threshold = 6 / appState.zoom;
+
+          const xCandidates: number[] = [];
+          const yCandidates: number[] = [];
+          for (const c of appState.components) {
+            if (movingSet.has(c.id)) continue;
+            xCandidates.push(c.x, c.x + c.width / 2, c.x + c.width);
+            yCandidates.push(c.y, c.y + c.height / 2, c.y + c.height);
+          }
+
+          const refXs = [targetX, targetX + w / 2, targetX + w];
+          const refYs = [targetY, targetY + h / 2, targetY + h];
+          let bestDx = Infinity, bestDy = Infinity;
+          for (const rx of refXs) {
+            for (const cx of xCandidates) {
+              const d = cx - rx;
+              if (Math.abs(d) < Math.abs(bestDx) && Math.abs(d) <= threshold) bestDx = d;
+            }
+          }
+          for (const ry of refYs) {
+            for (const cy of yCandidates) {
+              const d = cy - ry;
+              if (Math.abs(d) < Math.abs(bestDy) && Math.abs(d) <= threshold) bestDy = d;
+            }
+          }
+          if (bestDx !== Infinity) alignDx = bestDx;
+          if (bestDy !== Infinity) alignDy = bestDy;
+        }
+      }
+
       for (const start of movingStarts) {
         const comp = appState.components.find(c => c.id === start.id);
-        if (comp) {
-          const snapped = altHeld
-            ? { x: start.x + dx, y: start.y + dy }
-            : snap(start.x + dx, start.y + dy);
-          comp.x = snapped.x;
-          comp.y = snapped.y;
+        if (!comp) continue;
+        if (altHeld) {
+          comp.x = start.x + dx;
+          comp.y = start.y + dy;
+        } else {
+          const gridSnapped = snap(start.x + dx, start.y + dy);
+          comp.x = alignDx !== null ? start.x + dx + alignDx : gridSnapped.x;
+          comp.y = alignDy !== null ? start.y + dy + alignDy : gridSnapped.y;
         }
       }
     } else if (state === 'selecting' && rubberBand) {

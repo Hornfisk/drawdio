@@ -3,6 +3,18 @@ import { clearSelection } from '../state/selection.js';
 import { clearHistory } from '../state/history.js';
 import type { ComponentData, Group } from '../components/types.js';
 import { createDefaultEffects } from '../components/types.js';
+import { showToast } from '../state/toast.svelte.js';
+
+// Native File System Access handle (Chromium). Null on unsupported browsers.
+let fileHandle: FileSystemFileHandle | null = null;
+const hasFSAccess = typeof (globalThis as any).showSaveFilePicker === 'function';
+
+const FILE_PICKER_OPTS = {
+  types: [{
+    description: 'Drawdio project',
+    accept: { 'application/json': ['.drawdio.json', '.json'] as string[] },
+  }],
+};
 
 export function toJSON() {
   return {
@@ -16,8 +28,8 @@ export function toJSON() {
       refImageOpacity: appState.refImageOpacity,
       refImageVisible: appState.refImageVisible,
     },
-    components: structuredClone(appState.components),
-    groups: structuredClone(appState.groups),
+    components: JSON.parse(JSON.stringify(appState.components)),
+    groups: JSON.parse(JSON.stringify(appState.groups)),
   };
 }
 
@@ -88,20 +100,75 @@ export function newProject() {
     groups: [],
   });
   appState.fileName = null;
+  fileHandle = null;
   document.title = 'Drawdio';
 }
 
-export function save() {
-  const json = toJSON();
-  const str = JSON.stringify(json, null, 2);
+async function writeToHandle(handle: FileSystemFileHandle, str: string) {
+  const writable = await (handle as any).createWritable();
+  await writable.write(str);
+  await writable.close();
+}
+
+async function saveToHandle(handle: FileSystemFileHandle) {
+  const str = JSON.stringify(toJSON(), null, 2);
+  await writeToHandle(handle, str);
+  fileHandle = handle;
+  appState.fileName = handle.name;
+  appState.isDirty = false;
+  document.title = 'Drawdio \u2014 ' + handle.name;
+  showToast('Saved to ' + handle.name);
+}
+
+export async function save() {
+  const str = JSON.stringify(toJSON(), null, 2);
+
+  if (hasFSAccess) {
+    try {
+      if (fileHandle) {
+        await writeToHandle(fileHandle, str);
+        appState.isDirty = false;
+        showToast('Saved to ' + fileHandle.name);
+        return;
+      }
+      const suggestedName = appState.fileName || 'untitled.drawdio.json';
+      const handle: FileSystemFileHandle = await (globalThis as any).showSaveFilePicker({
+        suggestedName,
+        ...FILE_PICKER_OPTS,
+      });
+      await saveToHandle(handle);
+      return;
+    } catch (err) {
+      if ((err as DOMException).name === 'AbortError') return;
+      console.warn('FS Access save failed, falling back to download:', err);
+    }
+  }
+
+  // Fallback: anchor-tag download (goes to browser Downloads folder)
   const name = appState.fileName || 'untitled.drawdio.json';
   download(str, name, 'application/json');
   appState.isDirty = false;
   appState.fileName = name;
   document.title = 'Drawdio \u2014 ' + name;
+  showToast('Downloaded ' + name + ' (check your Downloads folder)');
 }
 
-export function saveAs() {
+export async function saveAs() {
+  if (hasFSAccess) {
+    try {
+      const suggestedName = appState.fileName || 'untitled.drawdio.json';
+      const handle: FileSystemFileHandle = await (globalThis as any).showSaveFilePicker({
+        suggestedName,
+        ...FILE_PICKER_OPTS,
+      });
+      await saveToHandle(handle);
+      return;
+    } catch (err) {
+      if ((err as DOMException).name === 'AbortError') return;
+      console.warn('FS Access saveAs failed, falling back:', err);
+    }
+  }
+
   const name = prompt('File name:', appState.fileName || 'untitled.drawdio.json');
   if (!name) return;
   let fileName = name;
@@ -109,7 +176,32 @@ export function saveAs() {
     fileName += '.drawdio.json';
   }
   appState.fileName = fileName;
-  save();
+  const str = JSON.stringify(toJSON(), null, 2);
+  download(str, fileName, 'application/json');
+  appState.isDirty = false;
+  document.title = 'Drawdio \u2014 ' + fileName;
+  showToast('Downloaded ' + fileName + ' (check your Downloads folder)');
+}
+
+export async function openProject() {
+  if (hasFSAccess) {
+    try {
+      const [handle]: FileSystemFileHandle[] = await (globalThis as any).showOpenFilePicker(FILE_PICKER_OPTS);
+      const file = await handle.getFile();
+      const text = await file.text();
+      const json = JSON.parse(text);
+      fromJSON(json);
+      fileHandle = handle;
+      appState.fileName = handle.name;
+      document.title = 'Drawdio \u2014 ' + handle.name;
+      showToast('Opened ' + handle.name);
+      return;
+    } catch (err) {
+      if ((err as DOMException).name === 'AbortError') return;
+      console.warn('FS Access open failed, falling back to <input>:', err);
+    }
+  }
+  document.getElementById('file-input')?.click();
 }
 
 export function loadFromFile(file: File) {
@@ -118,13 +210,35 @@ export function loadFromFile(file: File) {
     try {
       const json = JSON.parse(ev.target?.result as string);
       fromJSON(json);
+      fileHandle = null;
       appState.fileName = file.name;
       document.title = 'Drawdio \u2014 ' + file.name;
+      showToast('Loaded ' + file.name);
     } catch (err) {
       alert(`Failed to load "${file.name}": ${(err as Error).message}`);
     }
   };
   reader.readAsText(file);
+}
+
+export function restoreFromAutosave() {
+  try {
+    const saved = localStorage.getItem('drawdio_autosave');
+    const time = localStorage.getItem('drawdio_autosave_time');
+    if (!saved) {
+      showToast('No autosave found');
+      return;
+    }
+    const ago = time ? Math.round((Date.now() - parseInt(time)) / 60000) : -1;
+    const label = ago < 0 ? 'unknown time' : ago < 1 ? 'just now' : ago + ' min ago';
+    if (appState.isDirty && !confirm('Replace current work with autosave from ' + label + '?')) return;
+    fromJSON(JSON.parse(saved));
+    fileHandle = null;
+    appState.fileName = null;
+    showToast('Restored autosave (' + label + ')');
+  } catch (err) {
+    alert('Failed to restore autosave: ' + (err as Error).message);
+  }
 }
 
 function download(data: string | Blob, filename: string, mimeType: string) {

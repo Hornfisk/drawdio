@@ -206,6 +206,49 @@ body {
 }
 .panel-toggle:hover { background: var(--bg-hover); color: var(--text); }
 
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-header.right { justify-content: flex-end; }
+.panel-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border-muted);
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+.panel-toggle-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+  border-color: var(--border);
+}
+.panel-reopen {
+  flex-shrink: 0;
+  width: 24px;
+  background: var(--bg-panel);
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 6px 0;
+  line-height: 0;
+}
+.panel-reopen.left { border-right: 1px solid var(--border); }
+.panel-reopen.right { border-left: 1px solid var(--border); }
+.panel-reopen:hover { background: var(--bg-hover); color: var(--text); }
+
 /* ============================================================
    PALETTE
    ============================================================ */

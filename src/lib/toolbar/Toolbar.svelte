@@ -1,7 +1,8 @@
 <script lang="ts">
   import { appState } from '../state/app.svelte.js';
-  import { newProject, save, saveAs } from '../io/serialization.js';
+  import { newProject, save, saveAs, openProject, restoreFromAutosave } from '../io/serialization.js';
   import { exportPNG, exportSVG, copyJSONToClipboard } from '../io/export.js';
+  import { pickRefImageFromFile } from '../io/refImage.js';
 
   let menuOpen = $state(false);
 
@@ -25,36 +26,7 @@
 
   function loadRefImageFromMenu() {
     closeMenu();
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/png,image/jpeg,image/webp,image/gif';
-    input.onchange = () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        const img = new Image();
-        img.onload = () => {
-          if (appState.components.length > 0) {
-            if (!confirm(`Resize canvas to ${img.naturalWidth}×${img.naturalHeight}px?`)) {
-              appState.refImageDataUrl = dataUrl;
-              appState.refImageVisible = true;
-              appState.isDirty = true;
-              return;
-            }
-          }
-          appState.canvasWidth = img.naturalWidth;
-          appState.canvasHeight = img.naturalHeight;
-          appState.refImageDataUrl = dataUrl;
-          appState.refImageVisible = true;
-          appState.isDirty = true;
-        };
-        img.src = dataUrl;
-      };
-      reader.readAsDataURL(file);
-    };
-    input.click();
+    pickRefImageFromFile();
   }
 
   // Close on outside click
@@ -87,8 +59,8 @@
           <span>New</span>
         </div>
         <div class="toolbar-dropdown-item" role="button" tabindex="0"
-             onclick={() => { closeMenu(); document.getElementById('file-input')?.click(); }}
-             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenu(); document.getElementById('file-input')?.click(); } }}>
+             onclick={() => { closeMenu(); openProject(); }}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenu(); openProject(); } }}>
           <span>Open...</span><span class="toolbar-dropdown-shortcut">Ctrl+O</span>
         </div>
         <div class="toolbar-dropdown-item" role="button" tabindex="0"
@@ -100,6 +72,11 @@
              onclick={() => { closeMenu(); saveAs(); }}
              onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenu(); saveAs(); } }}>
           <span>Save As...</span>
+        </div>
+        <div class="toolbar-dropdown-item" role="button" tabindex="0"
+             onclick={() => { closeMenu(); restoreFromAutosave(); }}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenu(); restoreFromAutosave(); } }}>
+          <span>Restore Autosave…</span>
         </div>
         <div class="toolbar-dropdown-item" role="button" tabindex="0"
              onclick={loadRefImageFromMenu}
@@ -196,12 +173,17 @@
   <select
     class="toolbar-select"
     onchange={(e) => {
-      const val = (e.target as HTMLSelectElement).value;
-      if (val !== 'custom') {
+      const el = e.target as HTMLSelectElement;
+      const val = el.value;
+      if (val === 'from-image') {
+        pickRefImageFromFile();
+      } else if (val !== 'custom') {
         const [w, h] = val.split(',').map(Number);
         appState.canvasWidth = w;
         appState.canvasHeight = h;
       }
+      // Reset so selecting the same option again re-triggers
+      el.value = '';
     }}
   >
     <option value="900,600">Full Synth (900x600)</option>
@@ -209,6 +191,7 @@
     <option value="600,300">Wide Effect (600x300)</option>
     <option value="200,500">Channel Strip (200x500)</option>
     <option value="custom">Custom...</option>
+    <option value="from-image">From Image…</option>
   </select>
   <span class="toolbar-info">{appState.canvasWidth} × {appState.canvasHeight}</span>
 
