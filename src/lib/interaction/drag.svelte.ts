@@ -5,6 +5,8 @@ import { screenToCanvas, snap } from '../utils/geometry.js';
 import { pushHistory } from '../state/history.js';
 import { expandSelection } from '../state/groups.js';
 import { duplicateInPlace } from '../state/clipboard.js';
+import { startInlineEdit, inlineEdit } from '../ui/inline-edit.svelte.js';
+import { getTextPath } from '../components/text-fields.js';
 
 type DragState = 'idle' | 'moving' | 'selecting' | 'resizing' | 'panning' | 'rotating';
 
@@ -38,7 +40,23 @@ function normalizeAngle(a: number): number {
 }
 
 export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => void {
+  function onDoubleClick(e: MouseEvent) {
+    if (e.button !== 0) return;
+    const pt = screenToCanvas(svgEl, e.clientX, e.clientY);
+    const clicked = getComponentAtPoint(pt.x, pt.y);
+    if (clicked && getTextPath(clicked.type)) {
+      select(clicked.id);
+      startInlineEdit(clicked.id);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+
   function onMouseDown(e: MouseEvent) {
+    // Swallow canvas interactions while inline-editing text so clicks inside the
+    // editor (or outside it) don't start drags/rubber-bands. The blur on the
+    // input commits the edit.
+    if (inlineEdit.componentId) return;
     if (e.button === 1) {
       // Middle-click pan
       e.preventDefault();
@@ -417,6 +435,7 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
   }
 
   svgEl.addEventListener('mousedown', onMouseDown);
+  svgEl.addEventListener('dblclick', onDoubleClick);
   svgEl.addEventListener('contextmenu', onContextMenu);
   window.addEventListener('mousemove', onMouseMove);
   window.addEventListener('mouseup', onMouseUp);
@@ -427,6 +446,7 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
   // Cleanup
   return () => {
     svgEl.removeEventListener('mousedown', onMouseDown);
+    svgEl.removeEventListener('dblclick', onDoubleClick);
     svgEl.removeEventListener('contextmenu', onContextMenu);
     window.removeEventListener('mousemove', onMouseMove);
     window.removeEventListener('mouseup', onMouseUp);

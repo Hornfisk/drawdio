@@ -11,16 +11,18 @@
   import RubberBand from './RubberBand.svelte';
   import { initDrag } from '../interaction/drag.svelte.js';
   import { eyedropperState, cancelPick, completePick } from '../ui/eyedropper.svelte.js';
+  import InlineTextEditor from './InlineTextEditor.svelte';
+  import { inlineEdit } from '../ui/inline-edit.svelte.js';
 
-  let svgEl: SVGSVGElement;
-  let containerEl: HTMLDivElement;
+  let svgEl: SVGSVGElement | undefined = $state();
+  let containerEl: HTMLDivElement | undefined = $state();
   let dragOver = $state(false);
   let pickImageData: ImageData | null = null;
   let pickCanvasSize = { w: 0, h: 0 };
 
   function rasterizeSvg(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const svgMarkup = new XMLSerializer().serializeToString(svgEl);
+      const svgMarkup = new XMLSerializer().serializeToString(svgEl!);
       const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const img = new Image();
@@ -48,7 +50,7 @@
 
   function sampleAt(clientX: number, clientY: number): string | null {
     if (!pickImageData) return null;
-    const rect = svgEl.getBoundingClientRect();
+    const rect = svgEl!.getBoundingClientRect();
     // The rasterized SVG baked in the current viewBox, so the canvas (canvasWidth×canvasHeight)
     // already maps 1:1 to what the user sees. Direct proportional mapping.
     const px = Math.floor(((clientX - rect.left) / rect.width) * pickCanvasSize.w);
@@ -96,7 +98,7 @@
   );
 
   onMount(() => {
-    const cleanup = initDrag(svgEl, containerEl);
+    const cleanup = initDrag(svgEl!, containerEl!);
     return cleanup;
   });
 
@@ -221,6 +223,10 @@
       <RubberBand />
     </g>
   </svg>
+
+  {#if inlineEdit.componentId && svgEl && containerEl}
+    <InlineTextEditor {svgEl} {containerEl} />
+  {/if}
 
   {#if eyedropperState.active}
     <div class="pick-overlay"
