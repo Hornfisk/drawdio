@@ -125,6 +125,11 @@
              min="0" max="360" step="1"
              oninput={(e) => { selected.rotation = ((Number((e.target as HTMLInputElement).value) % 360) + 360) % 360; appState.isDirty = true; }} />
     </div>
+    <div class="props-row">
+      <span class="props-label">Lock</span>
+      <input type="checkbox" checked={!!selected.locked}
+             onchange={(e) => { selected.locked = (e.target as HTMLInputElement).checked; appState.isDirty = true; }} />
+    </div>
   </CollapsibleSection>
 
   <CollapsibleSection title="Appearance">

@@ -12,6 +12,7 @@
   import { checkAutoSave, startAutoSave } from './lib/io/autosave.js';
   import { loadFromFile } from './lib/io/serialization.js';
   import { appState } from './lib/state/app.svelte.js';
+  import { initBridge, bridgeState } from './lib/sync/bridge.svelte.js';
 
   // Keep CSS variables + color-scheme in sync with appState
   $effect(() => {
@@ -49,6 +50,7 @@
     const cleanupShortcuts = initShortcuts();
     const cleanupAutoSave = startAutoSave();
     checkAutoSave();
+    initBridge();
     return () => { cleanupShortcuts(); cleanupAutoSave(); };
   });
 </script>
@@ -119,6 +121,16 @@
   {/if}
 </div>
 
+{#if bridgeState.connected || bridgeState.connecting || bridgeState.autoConnect}
+  <div class="bridge-pill" class:connected={bridgeState.connected}
+       title={bridgeState.connected
+         ? 'Bridge connected — ' + (bridgeState.targetFile ?? bridgeState.url)
+         : (bridgeState.lastError || 'Bridge offline — toggle via ☰ → Bridge')}>
+    <span class="dot"></span>
+    Bridge: {bridgeState.connected ? 'connected' : bridgeState.connecting ? 'connecting…' : 'offline'}
+  </div>
+{/if}
+
 <ContextMenu />
 <Toast />
 <ShortcutsHelp />
@@ -135,3 +147,38 @@
          loadFromFile(file);
          input.value = '';
        }} />
+
+<style>
+  .bridge-pill {
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    z-index: 9999;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: rgba(30, 30, 30, 0.9);
+    color: #ccc;
+    border: 1px solid #444;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    pointer-events: auto;
+    user-select: none;
+  }
+  .bridge-pill .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef5350;
+  }
+  .bridge-pill.connected .dot {
+    background: #4ade80;
+    box-shadow: 0 0 6px #4ade80;
+  }
+  .bridge-pill.connected {
+    border-color: #2a5a33;
+    color: #e0e0e0;
+  }
+</style>

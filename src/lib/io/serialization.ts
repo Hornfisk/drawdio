@@ -4,6 +4,7 @@ import { clearHistory } from '../state/history.js';
 import type { ComponentData, Group } from '../components/types.js';
 import { createDefaultEffects } from '../components/types.js';
 import { showToast } from '../state/toast.svelte.js';
+import { applyFlatManifest, type FlatManifest } from './flatManifest.js';
 
 // Native File System Access handle (Chromium). Null on unsupported browsers.
 let fileHandle: FileSystemFileHandle | null = null;
@@ -35,7 +36,13 @@ export function toJSON() {
 
 export function fromJSON(json: Record<string, unknown>) {
   if (!json || typeof json.drawdio_version !== 'number') {
-    alert('Invalid Drawdio file: missing version field.');
+    if (looksLikeFlatManifest(json)) {
+      alert('This looks like a flat manifest (no drawdio_version).\n\n'
+        + 'Use ☰ \u2192 File \u2192 Import Flat Manifest\u2026 to load it,\n'
+        + 'or open it via the Bridge for live two-way sync.');
+    } else {
+      alert('Invalid Drawdio file: missing version field.');
+    }
     return;
   }
   if (!Array.isArray(json.components) || !Array.isArray(json.groups)) {
@@ -254,3 +261,56 @@ function download(data: string | Blob, filename: string, mimeType: string) {
 }
 
 export { download };
+
+/** Heuristic: top-level keys map to objects of {x,y,w,h} rects. */
+function looksLikeFlatManifest(json: unknown): boolean {
+  if (!json || typeof json !== 'object') return false;
+  const top = Object.values(json as Record<string, unknown>);
+  if (top.length === 0) return false;
+  let hits = 0;
+  for (const v of top) {
+    if (!v || typeof v !== 'object') continue;
+    const leaves = Object.values(v as Record<string, unknown>);
+    for (const leaf of leaves) {
+      if (leaf && typeof leaf === 'object'
+          && 'x' in leaf && 'y' in leaf && 'w' in leaf && 'h' in leaf) {
+        hits++;
+        if (hits >= 2) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/** Open a JSON file as a flat manifest, applied additively over current state. */
+export function importFlatManifest(): void {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const json = JSON.parse(ev.target?.result as string);
+        const n = applyFlatManifest(json as FlatManifest);
+        if (n === 0) {
+          alert('No entries found in ' + file.name + '.\n\n'
+            + 'The file is a valid JSON object but contains no '
+            + '{x, y, w, h} rects under any namespace.\n\n'
+            + 'For SquelchPro: Layout.json stays empty until you drag '
+            + 'a component in the plugin (F2 → drag → S to save). '
+            + 'After that first write the file has entries drawdio can edit.');
+          return;
+        }
+        appState.isDirty = true;
+        showToast('Imported ' + n + ' entries from ' + file.name);
+      } catch (err) {
+        alert('Failed to import: ' + (err as Error).message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}

@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added — Flat-Manifest Bridge
+- **Live-edit bridge** — drawdio can now drive any app that stores its layout as a JSON file on disk. Drag a rect in drawdio → target file updates within ~200 ms → target app picks up the new layout. Companion plugins (e.g. SquelchPro / JUCE) reload with **Ctrl+R**; no recompile needed.
+- **Bridge panel** (Toolbar → ☰ → Bridge) — GUI-driven WebSocket client. Connect / Disconnect toggle, target-file path, auto-connect-on-startup, one-click copy of the exact terminal command to launch the bridge server. Settings persist in localStorage.
+- **Bridge server** — ~120-line Node script (`tools/bridge/server.mjs`) watching the target file with chokidar, broadcasting over `ws://localhost:7878`. SHA-1 content hashing suppresses self-echo so there's no ping-pong. Run with `npm run bridge` after a one-time `npm run bridge:install`.
+- **Flat-manifest schema** — two-level JSON `{ <namespace>: { <id>: { x, y, w, h, locked? } } }`, documented in [`docs/FLAT_MANIFEST_SCHEMA.md`](docs/FLAT_MANIFEST_SCHEMA.md). Ids are round-tripped as dotted `namespace.id` on drawdio components.
+- **Import Flat Manifest** menu item (Toolbar → ☰ → File) — load a flat manifest as additive rects on the canvas. Empty files get an explanatory alert instead of a silent success toast.
+- **`locked` field on components** — rects marked `locked: true` are skipped by drag / resize / rotate. Exposed as a checkbox in the Properties panel; round-trips through the flat manifest so lock state survives a plugin reload.
+- **Friendlier "wrong file type" error** — opening a flat-manifest file via **Open…** now points you at the correct Import menu item instead of a generic parse error.
+
 ### Added
 - **Inline text editing on canvas** — press Enter on a single selected component (or double-click it) to edit its primary text in place. Works for labels, section headers, buttons, knobs, sliders, toggles, panels, images, dropdowns, and value readouts. Editor tracks pan/zoom and matches rendered font styling for `label_text`. Escape cancels, Enter/blur commits.
 - **README screenshot** — SquelchPro acid synth mockup as a showcase of what Drawdio can produce

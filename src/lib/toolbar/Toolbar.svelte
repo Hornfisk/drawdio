@@ -1,9 +1,11 @@
 <script lang="ts">
   import { appState } from '../state/app.svelte.js';
-  import { newProject, save, saveAs, openProject, restoreFromAutosave } from '../io/serialization.js';
+  import { newProject, save, saveAs, openProject, restoreFromAutosave, importFlatManifest } from '../io/serialization.js';
   import { exportPNG, exportSVG, copyJSONToClipboard } from '../io/export.js';
   import { pickRefImageFromFile } from '../io/refImage.js';
   import ColorField from '../ui/ColorField.svelte';
+  import BridgePanel from '../panels/BridgePanel.svelte';
+  import { bridgeState } from '../sync/bridge.svelte.js';
 
   let menuOpen = $state(false);
 
@@ -80,6 +82,11 @@
           <span>Restore Autosave…</span>
         </div>
         <div class="toolbar-dropdown-item" role="button" tabindex="0"
+             onclick={() => { closeMenu(); importFlatManifest(); }}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeMenu(); importFlatManifest(); } }}>
+          <span>Import Flat Manifest…</span>
+        </div>
+        <div class="toolbar-dropdown-item" role="button" tabindex="0"
              onclick={loadRefImageFromMenu}
              onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') loadRefImageFromMenu(); }}>
           <span>Load Reference Image…</span>
@@ -145,6 +152,12 @@
           <ColorField color={appState.accentColor}
                       onchange={(hex) => { appState.accentColor = hex; }} />
         </div>
+
+        <div class="toolbar-dropdown-sep"></div>
+
+        <!-- Bridge (SquelchPro / flat-manifest live sync) -->
+        <div class="toolbar-menu-section-label">Bridge</div>
+        <BridgePanel />
 
         <div class="toolbar-dropdown-sep"></div>
 
