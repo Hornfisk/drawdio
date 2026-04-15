@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- **Inline text editing on canvas** — press Enter on a single selected component (or double-click it) to edit its primary text in place. Works for labels, section headers, buttons, knobs, sliders, toggles, panels, images, dropdowns, and value readouts. Editor tracks pan/zoom and matches rendered font styling for `label_text`. Escape cancels, Enter/blur commits.
+- **README screenshot** — SquelchPro acid synth mockup as a showcase of what Drawdio can produce
 - **Rotation** — drag the rotation handle (circle above selection) to freely rotate any component; hold Shift to snap to configurable angle step; `[` / `]` keyboard shortcuts rotate by step (default 15°), Shift+`[`/`]` rotates by ±45°
 - **Rotation step** — configurable per-step angle (∠ input in toolbar right section); affects `[`/`]` keys and Shift-snap during drag
 - **Rotation field** in Properties panel (Position section) for precise numeric entry
