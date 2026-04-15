@@ -1,11 +1,23 @@
 // Flat-manifest JSON <-> drawdio ComponentData converters.
-// Shape: { "<ns>": { "<id>": { x, y, w, h, locked? } } }
-// Drawdio encodes entries as panel_group rects with id = "<ns>.<id>".
+// Shape: { "<ns>": { "<id>": { x, y, w, h, locked?, type? } } }
+// `type` (optional) is any registered drawdio component type id — the source
+// plugin uses it to request a real knob/button/toggle/readout/label instead
+// of the default flat panel_group. Unknown or missing types fall back to
+// panel_group so pre-typed manifests keep working.
 
 import { appState } from '../state/app.svelte.js';
 import { createDefaultEffects, type ComponentData } from '../components/types.js';
+import { getEntry } from '../components/registry.js';
 
-export interface FlatEntry { x: number; y: number; w: number; h: number; locked?: boolean }
+export interface FlatEntry {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  locked?: boolean;
+  /** Optional drawdio component type id (e.g. "rotary_knob"). Falls back to panel_group. */
+  type?: string;
+}
 export type FlatManifest = Record<string, Record<string, FlatEntry>>;
 
 const NS_COLORS: Record<string, string> = {
@@ -26,7 +38,8 @@ function isDottedManifestId(id: string): { ns: string; name: string } | null {
   return { ns, name };
 }
 
-/** Convert drawdio state → flat manifest. Only components with dotted ids participate. */
+/** Convert drawdio state → flat manifest. Only components with dotted ids participate.
+ *  The component's current `type` is preserved verbatim so round-trips don't drop it. */
 export function toFlatManifest(): FlatManifest {
   const out: FlatManifest = {};
   for (const c of appState.components) {
@@ -40,6 +53,7 @@ export function toFlatManifest(): FlatManifest {
       w: Math.round(c.width),
       h: Math.round(c.height),
       locked: !!c.locked,
+      type: c.type,
     };
   }
   return out;
@@ -69,6 +83,17 @@ export function applyFlatManifest(json: FlatManifest): number {
       const w = Math.max(2, Number(entry.w) || 10);
       const h = Math.max(2, Number(entry.h) || 10);
       const locked = !!entry.locked;
+
+      // Resolve requested type against the registry. Unknown/missing →
+      // panel_group so pre-type manifests keep their old appearance.
+      const requestedType = typeof entry.type === 'string' ? entry.type : null;
+      const requestedEntry = requestedType ? getEntry(requestedType) : undefined;
+      if (requestedType && !requestedEntry) {
+        console.warn(`[flatManifest] unknown component type "${requestedType}" for "${id}" — falling back to panel_group`);
+      }
+      const resolvedType = requestedEntry ? requestedType! : 'panel_group';
+      const resolvedEntry = requestedEntry ?? getEntry('panel_group');
+
       applied++;
       if (existing) {
         existing.x = x;
@@ -76,21 +101,27 @@ export function applyFlatManifest(json: FlatManifest): number {
         existing.width = w;
         existing.height = h;
         existing.locked = locked;
+        // If the plugin-declared type differs from what drawdio currently
+        // renders, retype in-place and reset properties to the type's
+        // defaults so the rendered component matches the plugin's intent.
+        if (existing.type !== resolvedType && resolvedEntry) {
+          existing.type = resolvedType;
+          existing.properties = { ...resolvedEntry.defaultProps.properties };
+        }
       } else {
-        const color = NS_COLORS[ns] || DEFAULT_COLOR;
+        const nsColor = NS_COLORS[ns] || DEFAULT_COLOR;
+        const color = resolvedEntry?.defaultProps.color ?? nsColor;
+        const properties = resolvedEntry
+          ? { ...resolvedEntry.defaultProps.properties }
+          : { bgColor: nsColor, bgOpacity: 0.35, cornerRadius: 2, borderWidth: 1 };
         const comp: ComponentData = {
           id,
-          type: 'panel_group',
+          type: resolvedType,
           x, y, width: w, height: h,
           rotation: 0,
           color,
           label: name,
-          properties: {
-            bgColor: color,
-            bgOpacity: 0.35,
-            cornerRadius: 2,
-            borderWidth: 1,
-          },
+          properties,
           effects: createDefaultEffects(),
           group: null,
           visible: true,
