@@ -195,5 +195,5 @@ export function launchCommand(): string | null {
   const path = bridgeState.layoutPath.trim();
   if (!path) return null;
   // Quote so paths with spaces survive copy/paste.
-  return `SQUELCH_LAYOUT='${path.replace(/'/g, `'\\''`)}' npm run bridge`;
+  return `BRIDGE_TARGET='${path.replace(/'/g, `'\\''`)}' npm run bridge`;
 }

@@ -26,7 +26,7 @@ When drawdio maps a manifest entry to one of its internal components, it uses `<
 
 ## Coordinate space
 
-Pixel coordinates in the target application's canvas. Drawdio does not interpret them — whatever space the producer writes, the consumer reads back. For SquelchPro this is the 780×220 faceplate region.
+Pixel coordinates in the target application's canvas. Drawdio does not interpret them — whatever space the producer writes, the consumer reads back. (Example: SquelchPro uses its 780×220 faceplate region.)
 
 ## Round-trip contract
 

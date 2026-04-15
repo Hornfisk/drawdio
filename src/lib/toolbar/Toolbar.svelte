@@ -155,7 +155,7 @@
 
         <div class="toolbar-dropdown-sep"></div>
 
-        <!-- Bridge (SquelchPro / flat-manifest live sync) -->
+        <!-- Bridge (flat-manifest live sync — e.g. SquelchPro) -->
         <div class="toolbar-menu-section-label">Bridge</div>
         <BridgePanel />
 
