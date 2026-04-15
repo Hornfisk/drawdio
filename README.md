@@ -107,14 +107,14 @@ npm run bridge:install
 
 **Run the bridge** (terminal, from the repo root):
 ```bash
-SQUELCH_LAYOUT=/absolute/path/to/Layout.json npm run bridge
+BRIDGE_TARGET=/absolute/path/to/Layout.json npm run bridge
 ```
 
 **Connect drawdio:** Toolbar → **☰** → **Bridge** → paste the same path → **Connect**. Green dot = live. Tick **Auto-connect on startup** to skip this step on reload.
 
 See [docs/FLAT_MANIFEST_SCHEMA.md](docs/FLAT_MANIFEST_SCHEMA.md) for the JSON contract the bridge speaks, and [tools/bridge/README.md](tools/bridge/README.md) for the protocol / env-var reference.
 
-Companion plugin (SquelchPro / JUCE) picks up the new layout on **Ctrl+R** — no recompile needed. Any app of your own can follow the same pattern.
+Any companion app that re-reads the JSON on demand can pair with this — e.g. a JUCE plugin like SquelchPro picks up the new layout on **Ctrl+R**, no recompile needed.
 
 ## Usage with AI
 

@@ -14,7 +14,7 @@ npm run bridge:install
 From the drawdio repo root:
 
 ```
-SQUELCH_LAYOUT=/path/to/Layout.json npm run bridge
+BRIDGE_TARGET=/path/to/Layout.json npm run bridge
 ```
 
 Or invoke the script directly with a positional arg:
@@ -26,7 +26,7 @@ node tools/bridge/server.mjs /path/to/Layout.json
 Then, in drawdio's toolbar → ☰ → **Bridge** → **Connect**. Paste the same path into the "Target file" field for the launch-command helper.
 
 Env vars:
-- `SQUELCH_LAYOUT` — absolute path to the JSON file to sync. Default `./Layout.json`.
+- `BRIDGE_TARGET` — absolute path to the JSON file to sync. Default `./Layout.json`. (`SQUELCH_LAYOUT` is still accepted as a legacy alias.)
 - `BRIDGE_PORT` — WS port. Default `7878`.
 
 The server prints:
@@ -55,4 +55,4 @@ Dragging rects in drawdio writes the target file within ~200 ms; editing the fil
 
 ## Pairing with a plugin
 
-The plugin just needs to read the JSON on demand. For SquelchPro: press **Ctrl+R** in the plugin to reload after a drawdio edit.
+The plugin just needs to read the JSON on demand and reload when the file changes. Example: SquelchPro uses **Ctrl+R** to re-read `Layout.json` after a drawdio edit.
