@@ -94,7 +94,10 @@ watcher.on('all', async (event) => {
   console.log(`[bridge] file change → broadcast (nonce=${payload.nonce})`);
 });
 
-const pngWatcher = chokidar.watch(BACKDROP, { ignoreInitial: true });
+// ignoreInitial=false so a Layout.png that appears before the first client
+// connects still reaches the client via the connection handler's readBackdrop.
+// Subsequent creations (file didn't exist at bridge startup) also fire 'add'.
+const pngWatcher = chokidar.watch(BACKDROP, { ignoreInitial: false });
 pngWatcher.on('all', async (event) => {
   if (event !== 'change' && event !== 'add') return;
   const backdrop = await readBackdrop();
