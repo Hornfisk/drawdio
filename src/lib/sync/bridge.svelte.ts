@@ -108,8 +108,24 @@ function openSocket() {
     bridgeState.lastError = 'connection error';
   };
   ws.onmessage = (ev) => {
-    let msg: { type?: string; nonce?: string; json?: FlatManifest; file?: string };
+    let msg: {
+      type?: string; nonce?: string; json?: FlatManifest; file?: string;
+      dataUrl?: string; width?: number; height?: number;
+    };
     try { msg = JSON.parse(ev.data); } catch { return; }
+
+    // Backdrop message: plugin dumped a PNG alongside Layout.json. Load it as
+    // the reference image and resize the canvas so drawdio is a 1:1 preview.
+    if (msg.type === 'backdrop' && msg.dataUrl) {
+      appState.refImageDataUrl = msg.dataUrl;
+      appState.refImageVisible = true;
+      appState.refImageOffsetX = 0;
+      appState.refImageOffsetY = 0;
+      if (msg.width)  appState.canvasWidth  = msg.width;
+      if (msg.height) appState.canvasHeight = msg.height;
+      return;
+    }
+
     if (msg.type !== 'manifest' || !msg.json) return;
     if (msg.file && !bridgeState.targetFile) bridgeState.targetFile = msg.file;
     if (msg.nonce && msg.nonce === bridgeState.lastSent) return; // echo
