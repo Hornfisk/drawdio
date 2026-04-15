@@ -272,6 +272,18 @@
         <span class="props-value">{Math.round(appState.refImageOpacity * 100)}%</span>
       </div>
       <div class="props-row">
+        <span class="props-label">Offset X</span>
+        <input type="number" step="1"
+               value={appState.refImageOffsetX}
+               oninput={(e) => { appState.refImageOffsetX = +(e.target as HTMLInputElement).value || 0; appState.isDirty = true; }} />
+      </div>
+      <div class="props-row">
+        <span class="props-label">Offset Y</span>
+        <input type="number" step="1"
+               value={appState.refImageOffsetY}
+               oninput={(e) => { appState.refImageOffsetY = +(e.target as HTMLInputElement).value || 0; appState.isDirty = true; }} />
+      </div>
+      <div class="props-row">
         <button class="props-btn"
                 onclick={() => { appState.refImageVisible = !appState.refImageVisible; }}>
           {appState.refImageVisible ? 'Hide' : 'Show'}

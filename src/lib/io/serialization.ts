@@ -28,6 +28,8 @@ export function toJSON() {
       refImageDataUrl: appState.refImageDataUrl,
       refImageOpacity: appState.refImageOpacity,
       refImageVisible: appState.refImageVisible,
+      refImageOffsetX: appState.refImageOffsetX,
+      refImageOffsetY: appState.refImageOffsetY,
     },
     components: JSON.parse(JSON.stringify(appState.components)),
     groups: JSON.parse(JSON.stringify(appState.groups)),
@@ -54,6 +56,7 @@ export function fromJSON(json: Record<string, unknown>) {
     canvas?: {
       width?: number; height?: number; bgColor?: string; gridSize?: number;
       refImageDataUrl?: string | null; refImageOpacity?: number; refImageVisible?: boolean;
+      refImageOffsetX?: number; refImageOffsetY?: number;
     };
     components?: ComponentData[];
     groups?: Group[];
@@ -74,6 +77,8 @@ export function fromJSON(json: Record<string, unknown>) {
     appState.refImageDataUrl = data.canvas.refImageDataUrl ?? null;
     appState.refImageOpacity = data.canvas.refImageOpacity ?? 0.5;
     appState.refImageVisible = data.canvas.refImageVisible ?? true;
+    appState.refImageOffsetX = data.canvas.refImageOffsetX ?? 0;
+    appState.refImageOffsetY = data.canvas.refImageOffsetY ?? 0;
   }
 
   if (data.components) {

@@ -32,4 +32,6 @@ export const appState = $state({
   refImageDataUrl: null as string | null,
   refImageOpacity: 0.5,
   refImageVisible: true,
+  refImageOffsetX: 0,
+  refImageOffsetY: 0,
 });

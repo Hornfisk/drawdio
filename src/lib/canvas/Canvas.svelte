@@ -192,7 +192,8 @@
     {#if appState.refImageDataUrl && appState.refImageVisible}
       <image id="ref-image"
              href={appState.refImageDataUrl}
-             x="0" y="0"
+             x={appState.refImageOffsetX}
+             y={appState.refImageOffsetY}
              width={appState.canvasWidth}
              height={appState.canvasHeight}
              opacity={appState.refImageOpacity}
