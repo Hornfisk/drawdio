@@ -2,7 +2,7 @@
 
 Drag-and-drop mockup tool for audio plugin UIs. Design knobs, faders, meters, sequencers, and more — then export as PNG, SVG, or JSON for implementation in JUCE, nih-plug, iPlug2, or any framework.
 
-![SquelchPro acid synth mockup built in Drawdio](docs/screenshots/squelchpro-mockup.png)
+![Drawdio editor with a Groovebox-style mockup in progress](docs/screenshots/drawdio-app.png)
 
 ## Quick start
 
