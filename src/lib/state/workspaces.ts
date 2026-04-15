@@ -30,6 +30,8 @@ function snapshotInto(ws: Workspace): void {
   ws.refImageDataUrl = appState.refImageDataUrl;
   ws.refImageOpacity = appState.refImageOpacity;
   ws.refImageVisible = appState.refImageVisible;
+  ws.refImageOffsetX = appState.refImageOffsetX;
+  ws.refImageOffsetY = appState.refImageOffsetY;
   ws.components = deepClone(appState.components);
   ws.groups = deepClone(appState.groups);
   ws.nextId = appState.nextId;
@@ -46,6 +48,8 @@ function loadFrom(ws: Workspace): void {
   appState.refImageDataUrl = ws.refImageDataUrl;
   appState.refImageOpacity = ws.refImageOpacity;
   appState.refImageVisible = ws.refImageVisible;
+  appState.refImageOffsetX = ws.refImageOffsetX;
+  appState.refImageOffsetY = ws.refImageOffsetY;
   appState.components.length = 0;
   for (const c of deepClone(ws.components)) appState.components.push(c);
   appState.groups.length = 0;
@@ -70,6 +74,8 @@ function makeFromAppState(name: string): Workspace {
     refImageDataUrl: appState.refImageDataUrl,
     refImageOpacity: appState.refImageOpacity,
     refImageVisible: appState.refImageVisible,
+    refImageOffsetX: appState.refImageOffsetX,
+    refImageOffsetY: appState.refImageOffsetY,
     components: deepClone(appState.components),
     groups: deepClone(appState.groups),
     nextId: appState.nextId,
@@ -128,6 +134,8 @@ function makeBlank(name: string): Workspace {
     refImageDataUrl: null,
     refImageOpacity: 0.5,
     refImageVisible: true,
+    refImageOffsetX: 0,
+    refImageOffsetY: 0,
     components: [],
     groups: [],
     nextId: 1,
