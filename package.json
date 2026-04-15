@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "bridge": "node tools/bridge/server.mjs",
+    "bridge:install": "cd tools/bridge && npm install"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.0",

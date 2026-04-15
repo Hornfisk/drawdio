@@ -96,6 +96,26 @@ import myKnob from '../assets/my-knob.png';
 - Include type hint in name: `bg-` for backgrounds, `icon-` for icons, `knob-` for knob graphics
 - Do **not** store large raster assets in the repo — keep individual files under 500 KB
 
+## Live Bridge (edit a plugin's layout from drawdio)
+
+Drawdio can act as a live, visual layout editor for any app that stores element bounds in a JSON file on disk. Drag a rect in drawdio → the file updates → the target app reloads and everything moves.
+
+**One-time setup:**
+```bash
+npm run bridge:install
+```
+
+**Run the bridge** (terminal, from the repo root):
+```bash
+SQUELCH_LAYOUT=/absolute/path/to/Layout.json npm run bridge
+```
+
+**Connect drawdio:** Toolbar → **☰** → **Bridge** → paste the same path → **Connect**. Green dot = live. Tick **Auto-connect on startup** to skip this step on reload.
+
+See [docs/FLAT_MANIFEST_SCHEMA.md](docs/FLAT_MANIFEST_SCHEMA.md) for the JSON contract the bridge speaks, and [tools/bridge/README.md](tools/bridge/README.md) for the protocol / env-var reference.
+
+Companion plugin (SquelchPro / JUCE) picks up the new layout on **Ctrl+R** — no recompile needed. Any app of your own can follow the same pattern.
+
 ## Usage with AI
 
 Export your mockup as PNG (screenshot) or JSON (structured layout), then share it with Claude, ChatGPT, or any AI assistant to guide plugin UI implementation. The JSON format includes exact positions, sizes, types, rotation, and properties for every component.

@@ -99,6 +99,7 @@ export interface ComponentData {
   group: string | null;
   visible: boolean;
   zIndex: number;
+  locked?: boolean;
 }
 
 export interface Group {

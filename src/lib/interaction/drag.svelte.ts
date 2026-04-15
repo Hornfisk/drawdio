@@ -92,7 +92,7 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       if (selFor) {
         const compId = selFor.getAttribute('data-selection-for')!;
         const comp = appState.components.find(c => c.id === compId);
-        if (comp) {
+        if (comp && !comp.locked) {
           state = 'rotating';
           pushHistory();
           rotatingId = compId;
@@ -115,7 +115,7 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       if (selFor) {
         const compId = selFor.getAttribute('data-selection-for')!;
         const comp = appState.components.find(c => c.id === compId);
-        if (comp) {
+        if (comp && !comp.locked) {
           state = 'resizing';
           pushHistory();
           resizeHandle = handleEl.getAttribute('data-handle');
@@ -157,6 +157,13 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
         select(clicked.id);
       }
 
+      // Locked components can still be selected (to unlock them) but not moved.
+      if (clicked.locked) {
+        hasMoved = false;
+        e.preventDefault();
+        return;
+      }
+
       state = 'moving';
       pushHistory();
       startX = pt.x;
@@ -167,8 +174,8 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       appState.selectedIds = movingIds;
       movingStarts = movingIds
         .map(id => appState.components.find(c => c.id === id))
-        .filter(c => c != null)
-        .map(c => ({ id: c.id, x: c.x, y: c.y }));
+        .filter(c => c != null && !c.locked)
+        .map(c => ({ id: c!.id, x: c!.x, y: c!.y }));
       hasMoved = false;
       e.preventDefault();
       return;
