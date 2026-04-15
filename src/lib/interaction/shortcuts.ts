@@ -9,6 +9,8 @@ import { exportPNG, exportSVG, copyJSONToClipboard } from '../io/export.js';
 import { pushHistory } from '../state/history.js';
 import { expandSelection } from '../state/groups.js';
 import { pasteImageAsComponent, setRefImageFromDataUrl } from '../io/refImage.js';
+import { startInlineEdit, isEditing } from '../ui/inline-edit.svelte.js';
+import { getTextPath } from '../components/text-fields.js';
 
 export function initShortcuts(): () => void {
   function onKeyDown(e: KeyboardEvent) {
@@ -27,6 +29,18 @@ export function initShortcuts(): () => void {
     const ctrl = e.ctrlKey || e.metaKey;
     const shift = e.shiftKey;
     const key = e.key.toLowerCase();
+
+    // Enter — start inline text edit on the single selected component
+    if (e.key === 'Enter' && !ctrl && !shift && !isEditing()) {
+      if (appState.selectedIds.length === 1) {
+        const comp = appState.components.find(c => c.id === appState.selectedIds[0]);
+        if (comp && getTextPath(comp.type)) {
+          startInlineEdit(comp.id);
+          e.preventDefault();
+          return;
+        }
+      }
+    }
 
     // Delete / Backspace
     if (key === 'delete' || key === 'backspace') {
