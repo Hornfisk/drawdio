@@ -1,9 +1,10 @@
 <script lang="ts">
   import { appState } from '../state/app.svelte.js';
-  import { select, clearSelection, selectAll, deleteSelected } from '../state/selection.js';
+  import { select, clearSelection, selectAll, deleteSelected, toggleLockForSelection } from '../state/selection.js';
   import { doCopy, doCut, doPaste, doDuplicate } from '../state/clipboard.js';
   import { createGroup, ungroupSelected, getGroupOf } from '../state/groups.js';
   import { bringForward, sendBackward, bringToFront, sendToBack } from '../state/zorder.js';
+  import { createWorkspace } from '../state/workspaces.js';
 
   type MenuItem = {
     label: string;
@@ -27,6 +28,12 @@
     for (const id of appState.selectedIds) {
       if (getGroupOf(id)) { hasGroup = true; break; }
     }
+    // Lock label reflects what the action will do: lock everything if any are unlocked, otherwise unlock.
+    const selectedComps = appState.selectedIds
+      .map(id => appState.components.find(c => c.id === id))
+      .filter((c): c is NonNullable<typeof c> => c != null);
+    const anyUnlocked = selectedComps.some(c => !c.locked);
+    const lockLabel = anyUnlocked ? 'Lock' : 'Unlock';
     const hasClipboard = appState.clipboard.length > 0;
     return [
       { label: 'Copy',         shortcut: 'Ctrl+C',       action: doCopy,                                         disabled: !hasSelection },
@@ -36,6 +43,7 @@
       { separator: true, label: '', action: () => {} },
       { label: 'Group',        shortcut: 'Ctrl+G',       action: () => createGroup([...appState.selectedIds]),   disabled: !multiSelected },
       { label: 'Ungroup',      shortcut: 'Ctrl+Shift+G', action: ungroupSelected,                                disabled: !hasGroup },
+      { label: lockLabel,      shortcut: 'Ctrl+L',       action: toggleLockForSelection,                         disabled: !hasSelection },
       { separator: true, label: '', action: () => {} },
       { label: 'Bring Forward',  shortcut: 'Ctrl+]',       action: () => bringForward(appState.selectedIds) },
       { label: 'Send Backward',  shortcut: 'Ctrl+[',       action: () => sendBackward(appState.selectedIds) },
@@ -47,9 +55,11 @@
     ];
   }
 
-  function buildForCanvas(): MenuItem[] {
+  function buildForCanvas(worldX: number, worldY: number): MenuItem[] {
     const hasClipboard = appState.clipboard.length > 0;
     return [
+      { label: 'New Workspace Here', action: () => createWorkspace({ x: Math.round(worldX), y: Math.round(worldY) }) },
+      { separator: true, label: '', action: () => {} },
       { label: 'Paste',      shortcut: 'Ctrl+V', action: doPaste,  disabled: !hasClipboard },
       { label: 'Select All', shortcut: 'Ctrl+A', action: selectAll },
     ];
@@ -75,11 +85,13 @@
   }
 
   function handleContextMenu(e: Event) {
-    const ce = e as CustomEvent<{ x: number; y: number; hasSelection: boolean }>;
+    const ce = e as CustomEvent<{ x: number; y: number; hasSelection: boolean; worldX?: number; worldY?: number }>;
     triggerEl = document.activeElement;
     x = ce.detail.x;
     y = ce.detail.y;
-    items = ce.detail.hasSelection ? buildForSelection() : buildForCanvas();
+    items = ce.detail.hasSelection
+      ? buildForSelection()
+      : buildForCanvas(ce.detail.worldX ?? 0, ce.detail.worldY ?? 0);
     visible = true;
 
     requestAnimationFrame(() => {

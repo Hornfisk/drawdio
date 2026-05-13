@@ -3,70 +3,70 @@
    ============================================================ */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* Dark theme (default) */
+/* Dark theme (default) — Hyperfocus DSP brand: graphite + slate + bone + amber */
 :root {
   color-scheme: dark;
-  --accent: #4fc3f7;
+  --accent: #FFB800;       /* brand amber */
   /* Backgrounds */
-  --bg-app:          #0d0d1a;
-  --bg-toolbar:      #1a1a2e;
-  --bg-panel:        #151528;
-  --bg-input:        #222;
-  --bg-hover:        #2a2a4a;
-  --bg-menu:         #1e1e36;
-  --canvas-area-bg:  #0a0a14;
+  --bg-app:          #0E0F12;   /* graphite */
+  --bg-toolbar:      #14161A;   /* lift from app */
+  --bg-panel:        #101216;
+  --bg-input:        #1A1D22;
+  --bg-hover:        #2A2D33;   /* slate-surface */
+  --bg-menu:         #16181C;
+  --canvas-area-bg:  #08090C;   /* canvas inset */
   /* Borders */
-  --border:          #2a2a4a;
-  --border-muted:    #333;
-  --border-strong:   #3a3a5a;
+  --border:          #2A2D33;   /* slate-surface 1px */
+  --border-muted:    #1F2126;
+  --border-strong:   #3A3D44;
   /* Text */
-  --text:            #ccc;
-  --text-secondary:  #aaa;
-  --text-muted:      #888;
-  --text-dim:        #777;
-  --text-dimmer:     #666;
+  --text:            #F4F1EA;   /* bone */
+  --text-secondary:  #C4C5C9;
+  --text-muted:      #8E93A0;   /* brand muted */
+  --text-dim:        #6B6E78;
+  --text-dimmer:     #55585F;
   /* Text on accent-coloured background */
-  --on-accent:       #0d0d1a;
+  --on-accent:       #0E0F12;   /* graphite on amber */
   /* Component-level tokens (used in SVG style= attributes) */
-  --component-bg:       #141416;
-  --component-bg-alt:   #2a2a3a;
-  --component-inactive: #383848;
-  --component-label:    #888;
+  --component-bg:       #14161A;
+  --component-bg-alt:   #2A2D33;
+  --component-inactive: #3A3D44;
+  --component-label:    #8E93A0;
   --meter-green:        #66bb6a;
   --meter-yellow:       #ffd54f;
   --meter-red:          #ef5350;
-  --key-white:          #e8e8e4;
-  --key-black:          #1a1a1a;
+  --key-white:          #F4F1EA;
+  --key-black:          #0E0F12;
 }
 
-/* Light theme overrides */
+/* Light theme overrides — inverted brand (bone background) */
 [data-theme="light"] {
   color-scheme: light;
-  --bg-app:          #f0f0f5;
-  --bg-toolbar:      #e4e4ef;
-  --bg-panel:        #ebebf3;
-  --bg-input:        #ffffff;
-  --bg-hover:        #d8d8ea;
-  --bg-menu:         #f5f5fa;
-  --canvas-area-bg:  #d0d0e0;
-  --border:          #c8c8d8;
-  --border-muted:    #d0d0de;
-  --border-strong:   #b4b4c8;
-  --text:            #1a1a2e;
-  --text-secondary:  #3a3a52;
-  --text-muted:      #5a5a72;
-  --text-dim:        #6a6a80;
-  --text-dimmer:     #808098;
-  --on-accent:       #ffffff;
-  --component-bg:       #e8e8ee;
-  --component-bg-alt:   #d0d0da;
-  --component-inactive: #c0c0cc;
-  --component-label:    #666;
+  --bg-app:          #F4F1EA;   /* bone */
+  --bg-toolbar:      #ECE9E2;
+  --bg-panel:        #F0EDE5;
+  --bg-input:        #FFFFFF;
+  --bg-hover:        #E4E1D8;
+  --bg-menu:         #FBF8F0;
+  --canvas-area-bg:  #FBF8F0;
+  --border:          #D6D2C7;
+  --border-muted:    #E4E0D5;
+  --border-strong:   #B8B4A8;
+  --text:            #0E0F12;   /* graphite */
+  --text-secondary:  #2A2D33;
+  --text-muted:      #6B6E78;
+  --text-dim:        #808089;
+  --text-dimmer:     #9A9AA0;
+  --on-accent:       #0E0F12;   /* graphite stays — amber/graphite is the safest pairing in either theme */
+  --component-bg:       #FFFFFF;
+  --component-bg-alt:   #E4E1D8;
+  --component-inactive: #C8C4B8;
+  --component-label:    #6B6E78;
   --meter-green:        #4caf50;
   --meter-yellow:       #ffb300;
   --meter-red:          #e53935;
-  --key-white:          #ffffff;
-  --key-black:          #1a1a1a;
+  --key-white:          #FFFFFF;
+  --key-black:          #0E0F12;
 }
 
 html, body { height: 100%; overflow: hidden; }
@@ -95,9 +95,20 @@ body {
 .logo {
   font-weight: 700;
   font-size: 15px;
-  color: var(--accent);
+  color: var(--text);
   letter-spacing: 1px;
   margin-right: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 9999px;
+  flex-shrink: 0;
 }
 .toolbar-separator {
   width: 1px;
@@ -131,6 +142,105 @@ body {
 .toolbar-select:focus { outline: 1px solid var(--accent); }
 .toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 .toolbar-info { color: var(--text-dim); font-size: 11px; font-family: monospace; }
+/* Inline workspace-header rename input (rendered inside SVG foreignObject) */
+.ws-header-rename {
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-family: system-ui, sans-serif;
+  outline: none;
+  width: 100%;
+  height: 18px;
+  box-sizing: border-box;
+}
+
+/* Workspace list (PropertiesPanel) */
+.ws-list { display: flex; flex-direction: column; gap: 2px; }
+.ws-list-row { display: flex; align-items: center; gap: 4px; padding: 2px; border-radius: 4px; }
+.ws-list-row.active { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.ws-list-name {
+  flex: 1;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ws-list-row.active .ws-list-name { color: var(--accent); font-weight: 600; }
+.ws-list-name:hover { background: var(--bg-hover); }
+.ws-list-name:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ws-list-action {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  line-height: 1;
+}
+.ws-list-action:hover { background: var(--bg-hover); color: var(--text); }
+.ws-list-delete:hover { background: var(--meter-red); color: var(--on-accent); }
+.ws-list-input {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--accent);
+  color: var(--text);
+  padding: 3px 6px;
+  font-size: 12px;
+  font-family: inherit;
+  border-radius: 3px;
+  outline: none;
+}
+.ws-list-actions-row { gap: 4px; padding-top: 4px; }
+.ws-list-add {
+  flex: 1;
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.ws-list-add:hover { color: var(--accent); border-color: var(--accent); }
+
+.toolbar-segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-left: 2px;
+}
+.toolbar-seg-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-left: 1px solid var(--border);
+  padding: 4px 8px;
+  min-width: 24px;
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+.toolbar-seg-btn:first-child { border-left: none; }
+.toolbar-seg-btn:hover:not(:disabled) { background: var(--bg-hover); color: var(--text); }
+.toolbar-seg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.toolbar-seg-btn.active { background: var(--accent); color: var(--on-accent); }
+.toolbar-seg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ============================================================
    LAYOUT
@@ -321,7 +431,7 @@ body {
 .palette-label { font-size: 12px; }
 .palette-item-group { display: flex; flex-direction: column; border-radius: 4px; }
 .palette-item-group.expanded {
-  background: var(--surface-hover);
+  background: var(--bg-hover);
   border-left: 2px solid var(--accent);
   margin: 1px 2px;
 }
@@ -430,7 +540,7 @@ select:disabled,
   cursor: pointer;
   user-select: none;
 }
-.palette-knob-item:hover { background: var(--surface-hover); }
+.palette-knob-item:hover { background: var(--bg-hover); }
 .palette-knob-thumb {
   width: 100%;
   aspect-ratio: 1;
@@ -602,6 +712,12 @@ select:disabled,
   gap: 6px;
   margin-bottom: 6px;
   min-width: 0;
+}
+.props-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 4px 2px 6px;
 }
 .props-label {
   font-size: 11px;

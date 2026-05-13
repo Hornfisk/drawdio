@@ -84,13 +84,19 @@ export function registerAllComponents(): void {
     displayName: 'Keys',
     defaultProps: {
       width: 360, height: 90, color: '#888', label: '',
-      properties: { octaves: 2, pitchBend: true, modWheel: true, portsPosition: 'front' },
+      properties: { octaves: 2, pitchBend: true, modWheel: true, portsPosition: 'front', showCLabels: true },
     },
     editableProperties: [
       { key: 'octaves', label: 'Octaves', type: 'number', propPath: 'properties.octaves' },
       { key: 'pitchBend', label: 'Pitch Bend', type: 'checkbox', propPath: 'properties.pitchBend' },
       { key: 'modWheel', label: 'Mod Wheel', type: 'checkbox', propPath: 'properties.modWheel' },
-      { key: 'portsPosition', label: 'Ports', type: 'text', propPath: 'properties.portsPosition' },
+      { key: 'showCLabels', label: 'C labels', type: 'checkbox', propPath: 'properties.showCLabels' },
+      { key: 'portsPosition', label: 'Ports', type: 'select', propPath: 'properties.portsPosition',
+        options: [
+          { value: 'front', label: 'Front' },
+          { value: 'back',  label: 'Back' },
+          { value: 'none',  label: 'None' },
+        ] },
     ],
   });
 
@@ -175,11 +181,14 @@ export function registerAllComponents(): void {
     displayName: 'Meter',
     defaultProps: {
       width: 16, height: 80, color: '#66bb6a', label: '',
-      properties: { orientation: 'vertical', segments: 12 },
+      properties: { orientation: 'vertical', segments: 12, greenColor: '', yellowColor: '', redColor: '' },
     },
     editableProperties: [
       { key: 'orientation', label: 'Dir', type: 'text', propPath: 'properties.orientation' },
       { key: 'segments', label: 'Segs', type: 'number', propPath: 'properties.segments', min: 1 },
+      { key: 'greenColor',  label: 'Low',  type: 'color', propPath: 'properties.greenColor' },
+      { key: 'yellowColor', label: 'Mid',  type: 'color', propPath: 'properties.yellowColor' },
+      { key: 'redColor',    label: 'High', type: 'color', propPath: 'properties.redColor' },
     ],
   });
 
@@ -216,7 +225,10 @@ export function registerAllComponents(): void {
       { key: 'rows', label: 'Rows', type: 'number', propPath: 'properties.rows', min: 1 },
       { key: 'columns', label: 'Cols', type: 'number', propPath: 'properties.columns', min: 1 },
       { key: 'cellSize', label: 'Cell', type: 'number', propPath: 'properties.cellSize', min: 1 },
-      { key: 'pattern', label: 'Active', type: 'text', propPath: 'properties.pattern' },
+      { key: 'pattern', label: 'Steps', type: 'text', propPath: 'properties.pattern' },
+      { key: 'activeColor', label: 'Active', type: 'color', propPath: 'properties.activeColor' },
+      { key: 'bgColor', label: 'BG', type: 'color', propPath: 'properties.bgColor' },
+      { key: 'inactiveColor', label: 'Inactive', type: 'color', propPath: 'properties.inactiveColor' },
     ],
   });
 
@@ -239,6 +251,9 @@ export function registerAllComponents(): void {
       { key: 'columns', label: 'Steps', type: 'number', propPath: 'properties.columns', min: 1 },
       { key: 'minNote', label: 'Min note', type: 'number', propPath: 'properties.minNote' },
       { key: 'maxNote', label: 'Max note', type: 'number', propPath: 'properties.maxNote' },
+      { key: 'accentColor', label: 'Accent', type: 'color', propPath: 'properties.accentColor' },
+      { key: 'slideColor',  label: 'Slide',  type: 'color', propPath: 'properties.slideColor' },
+      { key: 'restColor',   label: 'Rest',   type: 'color', propPath: 'properties.restColor' },
     ],
   });
 

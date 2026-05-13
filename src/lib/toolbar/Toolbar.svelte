@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { appState } from '../state/app.svelte.js';
+  import { appState, setGridDensity, GRID_DENSITY_SIZE, type GridDensity } from '../state/app.svelte.js';
   import { newProject, save, saveAs, openProject, restoreFromAutosave, importFlatManifest } from '../io/serialization.js';
   import { exportPNG, exportSVG, copyJSONToClipboard } from '../io/export.js';
   import { pickRefImageFromFile } from '../io/refImage.js';
@@ -9,16 +9,16 @@
 
   let menuOpen = $state(false);
 
-  // Accent color presets: label + value
+  // Accent color presets: amber first (brand), then alternates
   const ACCENT_PRESETS = [
-    { label: 'Cyan',    value: '#4fc3f7' },
-    { label: 'Orange',  value: '#ff6600' },
-    { label: 'Lime',    value: '#a3e635' },
-    { label: 'Purple',  value: '#c084fc' },
-    { label: 'Pink',    value: '#f472b6' },
-    { label: 'Amber',   value: '#f59e0b' },
-    { label: 'Red',     value: '#ef5350' },
-    { label: 'White',   value: '#e0e0e0' },
+    { label: 'Amber',   value: '#FFB800' },
+    { label: 'Cyan',    value: '#4FC3F7' },
+    { label: 'Lime',    value: '#A3E635' },
+    { label: 'Orange',  value: '#FF6600' },
+    { label: 'Pink',    value: '#F472B6' },
+    { label: 'Purple',  value: '#C084FC' },
+    { label: 'Red',     value: '#EF5350' },
+    { label: 'Bone',    value: '#F4F1EA' },
   ];
 
   function closeMenu() { menuOpen = false; }
@@ -221,5 +221,17 @@
       title="Toggle grid (G)"
       onclick={() => appState.gridVisible = !appState.gridVisible}
     >Grid</button>
+    <div class="toolbar-segmented" role="group" aria-label="Grid density">
+      {#each [['fine','F'],['medium','M'],['coarse','C']] as const as [d, letter]}
+        <button
+          class="toolbar-seg-btn"
+          class:active={appState.gridDensity === d}
+          disabled={!appState.gridVisible}
+          title={`${d[0].toUpperCase()}${d.slice(1)} grid (${GRID_DENSITY_SIZE[d as GridDensity]}px)`}
+          aria-label={`${d} grid density`}
+          onclick={() => setGridDensity(d as GridDensity)}
+        >{letter}</button>
+      {/each}
+    </div>
   </div>
 </div>

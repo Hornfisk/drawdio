@@ -17,33 +17,41 @@ Or open `drawdio.html` in any modern browser for the original single-file versio
 ## Features
 
 - **Component palette** — rotary knobs, faders, buttons, toggles, dropdowns, XY pads, meters, step sequencer, spectrum analyzer, and more
-- **Drag to canvas** — drag from palette or click to enter place-mode, then click on canvas
+- **Drag to canvas** — drag from palette to drop exactly under the cursor, or click to enter place-mode then click on canvas
+- **Multiple workspaces (frames)** — place any number of independent canvas frames side-by-side. Iterate on theme/variant ideas in one view, drag whole frames to relocate, snap them to the grid. Right-click empty canvas → **New Workspace Here**, or use the right-panel **Workspaces** section. Double-click a frame header to rename inline.
 - **Rotation** — drag the rotation handle above any selected component; hold Shift to snap; `[` / `]` to rotate by step, Shift+`[`/`]` for ±45°; configure step in toolbar (∠)
-- **Proportional resize** — drag any corner handle; hold Shift to lock aspect ratio
-- **Ctrl+drag** — duplicate components by holding Ctrl while dragging
-- **Snap-to-grid** — configurable grid with optional free placement (hold Alt)
-- **Properties panel** — edit position, size, rotation, color, and type-specific parameters
-- **Canvas presets** — Full Synth (900×600), Compact Effect (400×300), Channel Strip (200×500), and custom sizes
+- **Proportional resize** — drag any corner handle; hold Shift to lock aspect ratio. Multi-select 2+ items → union bounding box with handles that scale every component proportionally.
+- **Multi-select property editing** — select multiple components and the Properties panel applies edits to all of them (common values shown, `—` for mixed). Type-specific Parameters appear when all selected share a type.
+- **Ctrl/Alt+drag** — duplicate components or whole workspaces by holding Ctrl/Alt while dragging
+- **Snap-to-grid + visible snap guides** — thin amber alignment lines appear during drag/resize. Grid auto-coarsens at low zoom so it stays useful. Density preset toggle (`F` / `M` / `C`) maps to 16 / 32 / 64 px. Hold Alt to disable snap.
+- **Lock components** — `Ctrl+L`, right-click → Lock, or the Properties checkbox. Locked items can be selected (to unlock) but skip drag/resize/rotate.
+- **Nested groups** — `Ctrl+G` to group; `Ctrl+Shift+G` ungroups exactly one level. Copy/paste/duplicate preserve the full group tree.
+- **Hyperfocus DSP brand theme** — graphite + amber default palette with bone text. Pick any accent color (saved across reloads); brand-aligned swatch presets for typical plugin design colors.
+- **Properties panel** — edit position, size, rotation, color, and type-specific parameters. Components with multiple color slots (sequencers, level meters, etc.) expose all their colors.
+- **Canvas presets** — Full Synth (900×600), Compact Effect (400×300), Channel Strip (200×500), and custom sizes. Drag the handles around a workspace to resize freehand.
 - **Export** — PNG (1×/2×/3×/transparent), SVG, JSON layout with full component data
 - **Effects** — drop shadow, inner shadow, glow, bevel, gloss, texture fills, gradients
 - **Layers panel** — z-order control with visibility toggles
-- **Undo/Redo** — full snapshot history (Ctrl+Z / Ctrl+Shift+Z)
-- **Save/Load** — `.drawdio.json` files; autosave to localStorage
+- **Undo/Redo** — full snapshot history (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z)
+- **Save/Load** — `.drawdio.json` files (project format v2 with multiple workspaces; v1 files load by wrapping); autosave to localStorage
 - **Keyboard shortcuts** — see below
 
 ## Keyboard shortcuts
 
 | Key | Action |
 |-----|--------|
-| `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / Redo |
-| `Ctrl+C` / `Ctrl+V` / `Ctrl+X` | Copy / Paste / Cut |
+| `Ctrl+N` | New project |
+| `Ctrl+Z` / `Ctrl+Y` / `Ctrl+Shift+Z` | Undo / Redo / Redo (alternate) |
+| `Ctrl+C` / `Ctrl+V` / `Ctrl+X` | Copy / Paste / Cut (components or whole workspace, depending on selection) |
 | `Ctrl+D` | Duplicate (offset by grid step) |
-| `Ctrl+drag` | Duplicate in-place and move copy |
+| `Ctrl+drag` (component) | Duplicate in-place and move copy |
+| `Ctrl/Alt+drag` (workspace header) | Duplicate the workspace and drag the copy |
 | `Ctrl+A` | Select all |
+| `Ctrl+L` | Lock / unlock selection |
 | `Delete` / `Backspace` | Delete selection |
 | `[` / `]` | Rotate by step (default 15°) |
 | `Shift+[` / `Shift+]` | Rotate by ±45° |
-| `Ctrl+G` / `Ctrl+Shift+G` | Group / Ungroup |
+| `Ctrl+G` / `Ctrl+Shift+G` | Group / Ungroup (one nesting level per call) |
 | `Ctrl+]` / `Ctrl+[` | Bring forward / Send backward |
 | `Ctrl+Shift+]` / `Ctrl+Shift+[` | Bring to front / Send to back |
 | `Ctrl+S` | Save |
@@ -53,6 +61,7 @@ Or open `drawdio.html` in any modern browser for the original single-file versio
 | `+` / `-` | Zoom in / out |
 | `Ctrl+0` | Reset zoom |
 | `Space+drag` or middle-click drag | Pan |
+| `Alt` (held during drag/resize) | Disable snap-to-grid for the operation |
 | `Escape` | Clear selection / cancel placement |
 
 ## Custom Assets

@@ -1,4 +1,17 @@
 import { snap, screenToCanvas } from './geometry.js';
+import { appState } from '../state/app.svelte.js';
+import { getActiveWorkspace, switchWorkspace } from '../state/workspaces.js';
+
+/** Workspace rect hit-test in world space (mirrors drag.svelte.ts helper). */
+function workspaceAtWorldPoint(px: number, py: number) {
+  for (const ws of appState.workspaces) {
+    const isActive = ws.id === appState.activeWorkspaceId;
+    const w = isActive ? appState.canvasWidth : ws.canvasWidth;
+    const h = isActive ? appState.canvasHeight : ws.canvasHeight;
+    if (px >= ws.x && px <= ws.x + w && py >= ws.y && py <= ws.y + h) return ws;
+  }
+  return null;
+}
 
 const DRAG_THRESHOLD = 4;
 
@@ -61,8 +74,20 @@ export function createDragHandler(opts: DragHandlerOptions): (e: MouseEvent) => 
               me.clientX >= rect.left && me.clientX <= rect.right &&
               me.clientY >= rect.top  && me.clientY <= rect.bottom;
             if (overCanvas) {
-              const canvasPos = screenToCanvas(svgEl as SVGSVGElement, me.clientX, me.clientY);
-              const snapped = snap(canvasPos.x, canvasPos.y);
+              const worldPos = screenToCanvas(svgEl as SVGSVGElement, me.clientX, me.clientY);
+              // Components are stored in their workspace's local coord space. Figure out
+              // which workspace's rect was dropped on; if it's a non-active one, switch to it
+              // first so createComponent() appends into the right workspace's components.
+              const dropTarget = workspaceAtWorldPoint(worldPos.x, worldPos.y) ?? getActiveWorkspace();
+              if (dropTarget && dropTarget.id !== appState.activeWorkspaceId) {
+                switchWorkspace(dropTarget.id);
+              }
+              const active = getActiveWorkspace();
+              const offX = active?.x ?? 0;
+              const offY = active?.y ?? 0;
+              const localX = worldPos.x - offX;
+              const localY = worldPos.y - offY;
+              const snapped = snap(localX, localY);
               await opts.onDrop(snapped.x, snapped.y);
             }
           }

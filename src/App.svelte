@@ -12,9 +12,22 @@
   import { checkAutoSave, startAutoSave } from './lib/io/autosave.js';
   import { loadFromFile } from './lib/io/serialization.js';
   import { appState } from './lib/state/app.svelte.js';
+  import { ensureWorkspace } from './lib/state/workspaces.js';
   import { initBridge, bridgeState } from './lib/sync/bridge.svelte.js';
 
-  // Keep CSS variables + color-scheme in sync with appState
+  // Make sure at least one workspace exists so the tab bar has something to render.
+  ensureWorkspace();
+
+  // Hydrate accent + theme from localStorage before first render.
+  // Falls back to defaults in app.svelte.ts (#FFB800 amber, 'dark').
+  try {
+    const savedAccent = localStorage.getItem('drawdio_accent');
+    if (savedAccent && /^#[0-9a-fA-F]{6}$/.test(savedAccent)) appState.accentColor = savedAccent;
+    const savedTheme = localStorage.getItem('drawdio_theme');
+    if (savedTheme === 'light' || savedTheme === 'dark') appState.theme = savedTheme;
+  } catch {}
+
+  // Keep CSS variables + color-scheme in sync with appState, persist on change.
   $effect(() => {
     const root = document.documentElement;
     root.dataset.theme = appState.theme;
@@ -22,6 +35,10 @@
     root.style.setProperty('--accent', appState.accentColor);
     const meta = document.querySelector('meta[name="color-scheme"]');
     if (meta) meta.setAttribute('content', appState.theme);
+    try {
+      localStorage.setItem('drawdio_accent', appState.accentColor);
+      localStorage.setItem('drawdio_theme', appState.theme);
+    } catch {}
   });
 
   let leftPanelWidth = $state(180);

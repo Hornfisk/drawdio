@@ -104,7 +104,19 @@ export interface ComponentData {
 
 export interface Group {
   id: string;
+  /** Optional display label (defaults to "Group" in createGroup). */
+  label?: string;
+  /**
+   * Direct children. May reference component IDs *or* nested group IDs
+   * (group_*). Order is presentation order only — group logic doesn't care.
+   */
   children: string[];
+  /**
+   * Parent group ID, or null for top-level groups. Lets groups nest arbitrarily
+   * deep; ungroup unparents children to this level instead of always promoting
+   * them to the top.
+   */
+  parent: string | null;
 }
 
 export interface PropertySpec {

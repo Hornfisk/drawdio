@@ -6,6 +6,8 @@
   const hasPB      = $derived(!!(data.properties.pitchBend));
   const hasMW      = $derived(!!(data.properties.modWheel));
   const portsPos   = $derived((data.properties.portsPosition as string) || 'front');
+  // Default true for back-compat with existing saves.
+  const showCLabels = $derived(data.properties.showCLabels !== false);
 
   // Side strips (pitch bend + mod wheel)
   const sideCount  = $derived((hasPB ? 1 : 0) + (hasMW ? 1 : 0));
@@ -77,7 +79,7 @@
     {@const isC = wi % 7 === 0}
     <rect x={wx + 0.5} y="0" width={wkW - 1} height={wkH}
           rx="1" style="fill: var(--key-white);" stroke="#555" stroke-width="0.5"/>
-    {#if isC}
+    {#if isC && showCLabels}
       <text x={wx + wkW / 2} y={labelY} text-anchor="middle"
             style="fill: var(--component-label);" font-size={labelFsz} font-family="monospace">C</text>
     {/if}
@@ -98,8 +100,10 @@
     {/each}
   {/each}
 
-  <!-- Port indicator -->
-  <text x={keysX + 3} y={portsPos === 'front' ? data.height - 4 : 4} style="fill: var(--component-label);"
-        font-size={Math.min(8, data.height * 0.1)} font-family="monospace"
-        dominant-baseline={portsPos === 'front' ? 'auto' : 'hanging'}>⊕</text>
+  <!-- Port indicator — hidden when portsPos is 'none' -->
+  {#if portsPos !== 'none'}
+    <text x={keysX + 3} y={portsPos === 'front' ? data.height - 4 : 4} style="fill: var(--component-label);"
+          font-size={Math.min(8, data.height * 0.1)} font-family="monospace"
+          dominant-baseline={portsPos === 'front' ? 'auto' : 'hanging'}>⊕</text>
+  {/if}
 </g>

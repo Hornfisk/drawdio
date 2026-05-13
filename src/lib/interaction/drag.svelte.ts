@@ -7,6 +7,7 @@ import { expandSelection } from '../state/groups.js';
 import { duplicateInPlace } from '../state/clipboard.js';
 import { startInlineEdit, inlineEdit } from '../ui/inline-edit.svelte.js';
 import { getTextPath } from '../components/text-fields.js';
+import { getActiveWorkspace, switchWorkspace, duplicateActiveWorkspace } from '../state/workspaces.js';
 
 type DragState = 'idle' | 'moving' | 'selecting' | 'resizing' | 'panning' | 'rotating';
 
@@ -19,6 +20,59 @@ let hasMoved = false;
 let resizeHandle: string | null = null;
 let resizeStartBounds: { x: number; y: number; w: number; h: number } | null = null;
 let resizeStartAspect = 1;
+// Multi-resize: captured starts for all selected components and their union bbox.
+// null = single-component resize (uses resizeStartBounds above).
+let multiResizeStart: {
+  bbox: { x: number; y: number; w: number; h: number };
+  aspect: number;
+  comps: Array<{ id: string; x: number; y: number; w: number; h: number }>;
+} | null = null;
+
+// Workspace (canvas) resize. We capture the active workspace's world position
+// and dimensions so that top/left handles move the workspace's origin (rather
+// than dragging the bottom-right edge), which is the natural "grow leftward"
+// behaviour now that workspaces sit at their own world coordinates.
+//
+// Deltas are computed in *screen pixels* multiplied by the world-per-pixel
+// ratio captured at drag start. Otherwise the viewBox grows as the workspace
+// grows, world coords drift under a stationary cursor, and the resize runs
+// away in one direction.
+let workspaceResizeStart: {
+  w: number;
+  h: number;
+  wsX: number;
+  wsY: number;
+  screenStartX: number;
+  screenStartY: number;
+  worldPerPxX: number;
+  worldPerPxY: number;
+} | null = null;
+
+// Workspace frame drag (relocating a whole workspace by its header). Updates ws.x/ws.y.
+let frameDragState: {
+  wsId: string;
+  startX: number;
+  startY: number;
+  startWsX: number;
+  startWsY: number;
+} | null = null;
+
+/** Read the active workspace's world position (or 0,0 if no active workspace yet). */
+function getActiveOffset(): { x: number; y: number } {
+  const ws = getActiveWorkspace();
+  return ws ? { x: ws.x, y: ws.y } : { x: 0, y: 0 };
+}
+
+/** Find the workspace whose rect contains the given world-space point, if any. */
+function workspaceAtWorldPoint(px: number, py: number) {
+  for (const ws of appState.workspaces) {
+    const isActive = ws.id === appState.activeWorkspaceId;
+    const w = isActive ? appState.canvasWidth : ws.canvasWidth;
+    const h = isActive ? appState.canvasHeight : ws.canvasHeight;
+    if (px >= ws.x && px <= ws.x + w && py >= ws.y && py <= ws.y + h) return ws;
+  }
+  return null;
+}
 let movingIds: string[] = [];
 let ctrlDuplicatePending = false;
 let panStartX = 0, panStartY = 0;
@@ -32,8 +86,13 @@ let rotateStartAngle = 0;
 let rotateStartValue = 0;
 let activeRotation = $state<number | null>(null);
 
+// Snap guide overlay — populated during move/resize when alignment snap fires.
+export type SnapGuide = { axis: 'x' | 'y'; position: number };
+let snapGuides = $state<SnapGuide[]>([]);
+
 export function getRubberBand() { return rubberBand; }
 export function getActiveRotation() { return activeRotation; }
+export function getSnapGuides(): SnapGuide[] { return snapGuides; }
 
 function normalizeAngle(a: number): number {
   return ((a % 360) + 360) % 360;
@@ -42,7 +101,21 @@ function normalizeAngle(a: number): number {
 export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => void {
   function onDoubleClick(e: MouseEvent) {
     if (e.button !== 0) return;
-    const pt = screenToCanvas(svgEl, e.clientX, e.clientY);
+    // Workspace header double-click → inline rename.
+    const headerEl = (e.target as Element).closest?.('[data-workspace-header]');
+    if (headerEl) {
+      const wsId = headerEl.getAttribute('data-workspace-header')!;
+      const ws = appState.workspaces.find(w => w.id === wsId);
+      if (ws) {
+        appState.renamingWorkspaceId = ws.id;
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+    }
+    const ptWorld = screenToCanvas(svgEl, e.clientX, e.clientY);
+    const off = getActiveOffset();
+    const pt = { x: ptWorld.x - off.x, y: ptWorld.y - off.y };
     const clicked = getComponentAtPoint(pt.x, pt.y);
     if (clicked && getTextPath(clicked.type)) {
       select(clicked.id);
@@ -83,7 +156,54 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       return;
     }
 
-    const pt = screenToCanvas(svgEl, e.clientX, e.clientY);
+    const ptWorld = screenToCanvas(svgEl, e.clientX, e.clientY);
+
+    // Workspace frame header — selects the workspace as an entity + starts
+    // optional drag-to-move. Ctrl/Cmd or Alt held = copy-drag (duplicate first,
+    // then drag the duplicate from the original's location).
+    const headerEl = (e.target as Element).closest?.('[data-workspace-header]');
+    if (headerEl) {
+      const wsId = headerEl.getAttribute('data-workspace-header')!;
+      const ws = appState.workspaces.find(w => w.id === wsId);
+      if (ws) {
+        if (wsId !== appState.activeWorkspaceId) switchWorkspace(wsId);
+        const copyDrag = e.ctrlKey || e.metaKey || e.altKey;
+        if (copyDrag) {
+          // Duplicate the workspace, place the copy at the original's position,
+          // and start dragging the copy. Releasing without movement leaves the
+          // duplicate stacked exactly on top — user can move it next.
+          const dup = duplicateActiveWorkspace();
+          if (dup) {
+            dup.x = ws.x;
+            dup.y = ws.y;
+          }
+        }
+        // Clear component selection — the workspace is now the "selected entity"
+        // for Ctrl+C / Ctrl+V / Delete.
+        appState.selectedIds = [];
+        appState.selectedWorkspaceId = appState.activeWorkspaceId;
+        const active = getActiveWorkspace();
+        if (active) {
+          state = 'moving';
+          pushHistory();
+          frameDragState = {
+            wsId: active.id,
+            startX: ptWorld.x,
+            startY: ptWorld.y,
+            startWsX: active.x,
+            startWsY: active.y,
+          };
+          movingIds = [];
+          hasMoved = false;
+        }
+        e.preventDefault();
+        return;
+      }
+    }
+
+    // Active workspace local coords (component coords are workspace-local).
+    const off = getActiveOffset();
+    const pt = { x: ptWorld.x - off.x, y: ptWorld.y - off.y };
 
     // Check rotation handle (must come before resize handle check)
     const rotHandleEl = (e.target as Element).closest?.('[data-rotate-handle]');
@@ -114,6 +234,77 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       const selFor = handleEl.closest('[data-selection-for]');
       if (selFor) {
         const compId = selFor.getAttribute('data-selection-for')!;
+
+        if (compId === '__workspace__') {
+          // Workspace (canvas) resize via the handles around the workspace rect.
+          const activeWs = getActiveWorkspace();
+          if (!activeWs) return;
+          // Snapshot the world-per-pixel ratio so cursor deltas stay consistent
+          // even as the viewBox grows with the workspace. Without this, growing
+          // the workspace makes the same screen X map to a larger world X each
+          // frame, which feeds the resize and runs away in one direction.
+          const ctm = svgEl.getScreenCTM();
+          const inv = ctm?.inverse();
+          const worldPerPxX = inv ? Math.abs(inv.a) : 1;
+          const worldPerPxY = inv ? Math.abs(inv.d) : 1;
+          state = 'resizing';
+          pushHistory();
+          resizeHandle = handleEl.getAttribute('data-handle');
+          resizeStartBounds = { x: 0, y: 0, w: appState.canvasWidth, h: appState.canvasHeight };
+          resizeStartAspect = appState.canvasHeight > 0 ? appState.canvasWidth / appState.canvasHeight : 1;
+          multiResizeStart = null;
+          workspaceResizeStart = {
+            w: appState.canvasWidth,
+            h: appState.canvasHeight,
+            wsX: activeWs.x,
+            wsY: activeWs.y,
+            screenStartX: e.clientX,
+            screenStartY: e.clientY,
+            worldPerPxX,
+            worldPerPxY,
+          };
+          startX = pt.x;
+          startY = pt.y;
+          movingIds = [];
+          hasMoved = false;
+          e.preventDefault();
+          return;
+        }
+
+        if (compId === '__multi__') {
+          // Multi-selection union-bbox resize. Capture every unlocked component's
+          // start bounds plus the union bbox, then scale them all proportionally.
+          const selected = appState.selectedIds
+            .map(id => appState.components.find(c => c.id === id))
+            .filter((c): c is NonNullable<typeof c> => c != null && !c.locked);
+          if (selected.length < 2) return;
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          for (const c of selected) {
+            minX = Math.min(minX, c.x);
+            minY = Math.min(minY, c.y);
+            maxX = Math.max(maxX, c.x + c.width);
+            maxY = Math.max(maxY, c.y + c.height);
+          }
+          const bw = maxX - minX, bh = maxY - minY;
+          if (bw <= 0 || bh <= 0) return;
+          state = 'resizing';
+          pushHistory();
+          resizeHandle = handleEl.getAttribute('data-handle');
+          resizeStartBounds = { x: minX, y: minY, w: bw, h: bh };
+          resizeStartAspect = bw / bh;
+          multiResizeStart = {
+            bbox: { x: minX, y: minY, w: bw, h: bh },
+            aspect: bw / bh,
+            comps: selected.map(c => ({ id: c.id, x: c.x, y: c.y, w: c.width, h: c.height })),
+          };
+          startX = pt.x;
+          startY = pt.y;
+          movingIds = selected.map(c => c.id);
+          hasMoved = false;
+          e.preventDefault();
+          return;
+        }
+
         const comp = appState.components.find(c => c.id === compId);
         if (comp && !comp.locked) {
           state = 'resizing';
@@ -121,6 +312,7 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
           resizeHandle = handleEl.getAttribute('data-handle');
           resizeStartBounds = { x: comp.x, y: comp.y, w: comp.width, h: comp.height };
           resizeStartAspect = comp.height > 0 ? comp.width / comp.height : 1;
+          multiResizeStart = null;
           startX = pt.x;
           startY = pt.y;
           movingIds = [compId];
@@ -131,7 +323,7 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       }
     }
 
-    // Placement mode
+    // Placement mode — only valid inside the active workspace bounds.
     if (appState.placingType) {
       const snapped = snap(pt.x, pt.y);
       const data = createComponent(appState.placingType, snapped.x, snapped.y);
@@ -143,8 +335,26 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       return;
     }
 
-    // Check component under cursor
+    // Component hit-test runs FIRST — components are workspace-local but can
+    // sit outside the workspace's rect (e.g. after the workspace was resized
+    // smaller, or after a paste that drifted them out). If a component is hit
+    // we always treat the click as a component click, regardless of which
+    // workspace's rect contains the cursor.
     const clicked = getComponentAtPoint(pt.x, pt.y);
+
+    if (!clicked) {
+      // No component under cursor. Decide between workspace switch and rubber-band.
+      const clickedWs = workspaceAtWorldPoint(ptWorld.x, ptWorld.y);
+      if (clickedWs && clickedWs.id !== appState.activeWorkspaceId) {
+        switchWorkspace(clickedWs.id);
+        e.preventDefault();
+        return;
+      }
+      // Either inside the active workspace's rect OR in the gutter beyond it —
+      // either way we fall through to the rubber-band. Components can drift
+      // outside the workspace rect (resize-shrink, paste-offset, etc.) and
+      // need to remain reachable via box-select.
+    }
     if (clicked) {
       const ctrl = e.ctrlKey || e.metaKey;
       if (e.shiftKey) {
@@ -204,7 +414,34 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       return;
     }
 
-    const pt = screenToCanvas(svgEl, e.clientX, e.clientY);
+    const ptWorld = screenToCanvas(svgEl, e.clientX, e.clientY);
+
+    // Workspace frame relocation (dragging the workspace header).
+    if (frameDragState) {
+      const fd = frameDragState;
+      const ws = appState.workspaces.find(w => w.id === fd.wsId);
+      if (ws) {
+        hasMoved = true;
+        const dx = ptWorld.x - fd.startX;
+        const dy = ptWorld.y - fd.startY;
+        let newX = fd.startWsX + dx;
+        let newY = fd.startWsY + dy;
+        // Snap frame to grid when snap is on (matches component snap UX).
+        if (appState.snapEnabled && !altHeld) {
+          const g = appState.gridSize;
+          newX = Math.round(newX / g) * g;
+          newY = Math.round(newY / g) * g;
+        }
+        ws.x = newX;
+        ws.y = newY;
+        appState.isDirty = true;
+      }
+      return;
+    }
+
+    // Translate to active workspace local coords for component operations.
+    const off = getActiveOffset();
+    const pt = { x: ptWorld.x - off.x, y: ptWorld.y - off.y };
 
     if (state === 'moving') {
       // Ctrl+drag: on first move, duplicate originals in-place and move copies
@@ -226,6 +463,7 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       // Compute group-wide alignment snap delta from the first moving component.
       // Candidates: left/center/right x and top/center/bottom y of all non-moving components.
       let alignDx: number | null = null, alignDy: number | null = null;
+      let guideX: number | null = null, guideY: number | null = null;
       if (!altHeld && movingStarts.length > 0) {
         const movingSet = new Set(movingIds);
         const ref = movingStarts[0];
@@ -250,19 +488,30 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
           for (const rx of refXs) {
             for (const cx of xCandidates) {
               const d = cx - rx;
-              if (Math.abs(d) < Math.abs(bestDx) && Math.abs(d) <= threshold) bestDx = d;
+              if (Math.abs(d) < Math.abs(bestDx) && Math.abs(d) <= threshold) {
+                bestDx = d;
+                guideX = cx;
+              }
             }
           }
           for (const ry of refYs) {
             for (const cy of yCandidates) {
               const d = cy - ry;
-              if (Math.abs(d) < Math.abs(bestDy) && Math.abs(d) <= threshold) bestDy = d;
+              if (Math.abs(d) < Math.abs(bestDy) && Math.abs(d) <= threshold) {
+                bestDy = d;
+                guideY = cy;
+              }
             }
           }
           if (bestDx !== Infinity) alignDx = bestDx;
           if (bestDy !== Infinity) alignDy = bestDy;
         }
       }
+
+      const nextGuides: SnapGuide[] = [];
+      if (guideX !== null) nextGuides.push({ axis: 'x', position: guideX });
+      if (guideY !== null) nextGuides.push({ axis: 'y', position: guideY });
+      snapGuides = nextGuides;
 
       for (const start of movingStarts) {
         const comp = appState.components.find(c => c.id === start.id);
@@ -304,45 +553,184 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       const b = resizeStartBounds;
       let newX = b.x, newY = b.y, newW = b.w, newH = b.h;
 
-      if (resizeHandle.includes('r')) { newW = Math.max(10, b.w + rdx); }
-      if (resizeHandle.includes('l')) { newW = Math.max(10, b.w - rdx); newX = b.x + b.w - newW; }
-      if (resizeHandle.includes('b')) { newH = Math.max(10, b.h + rdy); }
-      if (resizeHandle.includes('t')) { newH = Math.max(10, b.h - rdy); newY = b.y + b.h - newH; }
+      // For multi-resize the bbox needs a larger minimum so individual components
+      // don't get crushed below their 10px floor. Single-resize keeps its 10px min.
+      const minDim = multiResizeStart ? 20 : 10;
+      if (resizeHandle.includes('r')) { newW = Math.max(minDim, b.w + rdx); }
+      if (resizeHandle.includes('l')) { newW = Math.max(minDim, b.w - rdx); newX = b.x + b.w - newW; }
+      if (resizeHandle.includes('b')) { newH = Math.max(minDim, b.h + rdy); }
+      if (resizeHandle.includes('t')) { newH = Math.max(minDim, b.h - rdy); newY = b.y + b.h - newH; }
 
       // Shift: constrain aspect ratio on corner handles
       const isCorner = (resizeHandle.includes('t') || resizeHandle.includes('b'))
                     && (resizeHandle.includes('l') || resizeHandle.includes('r'));
       if (e.shiftKey && isCorner) {
         if (Math.abs(newW - b.w) >= Math.abs(newH - b.h)) {
-          newH = Math.max(10, newW / resizeStartAspect);
+          newH = Math.max(minDim, newW / resizeStartAspect);
           if (resizeHandle.includes('t')) newY = b.y + b.h - newH;
         } else {
-          newW = Math.max(10, newH * resizeStartAspect);
+          newW = Math.max(minDim, newH * resizeStartAspect);
           if (resizeHandle.includes('l')) newX = b.x + b.w - newW;
         }
       }
 
+      // Workspace resize. With workspaces now living at their own (ws.x, ws.y) world
+      // position, top/left handles can move the origin (the handle stays under the
+      // cursor) while bottom/right handles extend the far edge — components are
+      // workspace-local so they stay put relative to the top-left.
+      if (workspaceResizeStart) {
+        const minDimWs = 100;
+        const start = workspaceResizeStart;
+        const activeWs = getActiveWorkspace();
+        if (!activeWs) return;
+        // Screen-pixel deltas multiplied by the world-per-pixel ratio captured
+        // at drag start. This keeps deltas stable even though the viewBox is
+        // changing every frame as we update appState.canvasWidth/Height.
+        const cdx = (e.clientX - start.screenStartX) * start.worldPerPxX;
+        const cdy = (e.clientY - start.screenStartY) * start.worldPerPxY;
+
+        let finalW = start.w, finalH = start.h;
+        let finalWsX = start.wsX, finalWsY = start.wsY;
+
+        if (resizeHandle.includes('r')) finalW = Math.max(minDimWs, start.w + cdx);
+        if (resizeHandle.includes('l')) {
+          const newW = Math.max(minDimWs, start.w - cdx);
+          finalWsX = start.wsX + (start.w - newW);  // origin moves with the left edge
+          finalW = newW;
+        }
+        if (resizeHandle.includes('b')) finalH = Math.max(minDimWs, start.h + cdy);
+        if (resizeHandle.includes('t')) {
+          const newH = Math.max(minDimWs, start.h - cdy);
+          finalWsY = start.wsY + (start.h - newH);
+          finalH = newH;
+        }
+
+        if (appState.snapEnabled && !altHeld) {
+          const g = appState.gridSize;
+          if (resizeHandle.includes('l')) {
+            const snappedX = Math.round(finalWsX / g) * g;
+            finalW = Math.max(minDimWs, finalW + (finalWsX - snappedX));
+            finalWsX = snappedX;
+          } else if (resizeHandle.includes('r')) {
+            const right = finalWsX + finalW;
+            finalW = Math.max(minDimWs, Math.round(right / g) * g - finalWsX);
+          }
+          if (resizeHandle.includes('t')) {
+            const snappedY = Math.round(finalWsY / g) * g;
+            finalH = Math.max(minDimWs, finalH + (finalWsY - snappedY));
+            finalWsY = snappedY;
+          } else if (resizeHandle.includes('b')) {
+            const bottom = finalWsY + finalH;
+            finalH = Math.max(minDimWs, Math.round(bottom / g) * g - finalWsY);
+          }
+        }
+
+        appState.canvasWidth = Math.max(minDimWs, Math.round(finalW));
+        appState.canvasHeight = Math.max(minDimWs, Math.round(finalH));
+        activeWs.x = Math.round(finalWsX);
+        activeWs.y = Math.round(finalWsY);
+        appState.isDirty = true;
+        snapGuides = [];
+        return;
+      }
+
+      // Multi-resize: scale every captured component proportionally relative to the bbox.
+      // Skip the per-edge grid/alignment snap below — it's geared at single-component edges
+      // and would distort the proportional scale across the group.
+      if (multiResizeStart) {
+        const start = multiResizeStart;
+        const sx = newW / start.bbox.w;
+        const sy = newH / start.bbox.h;
+        for (const s of start.comps) {
+          const comp = appState.components.find(c => c.id === s.id);
+          if (!comp) continue;
+          const relX = s.x - start.bbox.x;
+          const relY = s.y - start.bbox.y;
+          comp.x = newX + relX * sx;
+          comp.y = newY + relY * sy;
+          comp.width = Math.max(10, Math.round(s.w * sx));
+          comp.height = Math.max(10, Math.round(s.h * sy));
+        }
+        snapGuides = [];
+        return;
+      }
+
       // Snap only the moving edges — snapping the anchored edge would shift the whole item.
       // Alt disables snapping for pixel-perfect resize.
+      let resizeGuideX: number | null = null, resizeGuideY: number | null = null;
       if (appState.snapEnabled && !altHeld) {
-        const g = appState.gridSize;
-        if (resizeHandle.includes('l')) {
-          const sx = Math.round(newX / g) * g;
-          newW = Math.max(10, newW + (newX - sx));
-          newX = sx;
-        } else if (resizeHandle.includes('r')) {
-          const right = newX + newW;
-          newW = Math.max(10, Math.round(right / g) * g - newX);
+        // Alignment snap to other components' edges/centers takes precedence over grid.
+        const movingSet = new Set(movingIds);
+        const threshold = 6 / appState.zoom;
+        const xCandidates: number[] = [];
+        const yCandidates: number[] = [];
+        for (const c of appState.components) {
+          if (movingSet.has(c.id)) continue;
+          xCandidates.push(c.x, c.x + c.width / 2, c.x + c.width);
+          yCandidates.push(c.y, c.y + c.height / 2, c.y + c.height);
         }
-        if (resizeHandle.includes('t')) {
-          const sy = Math.round(newY / g) * g;
-          newH = Math.max(10, newH + (newY - sy));
-          newY = sy;
-        } else if (resizeHandle.includes('b')) {
-          const bottom = newY + newH;
-          newH = Math.max(10, Math.round(bottom / g) * g - newY);
+        const movingLeft   = resizeHandle.includes('l');
+        const movingRight  = resizeHandle.includes('r');
+        const movingTop    = resizeHandle.includes('t');
+        const movingBottom = resizeHandle.includes('b');
+
+        function nearestCandidate(value: number, cands: number[]): { d: number; target: number } | null {
+          let best: { d: number; target: number } | null = null;
+          for (const cv of cands) {
+            const d = cv - value;
+            if (Math.abs(d) <= threshold && (best === null || Math.abs(d) < Math.abs(best.d))) {
+              best = { d, target: cv };
+            }
+          }
+          return best;
+        }
+
+        // X axis: snap only the moving edge
+        let xSnap: { d: number; target: number } | null = null;
+        if (movingLeft)  xSnap = nearestCandidate(newX, xCandidates);
+        if (movingRight) xSnap = nearestCandidate(newX + newW, xCandidates);
+        if (xSnap) {
+          if (movingLeft)  { newW = Math.max(10, newW - xSnap.d); newX += xSnap.d; }
+          if (movingRight) { newW = Math.max(10, newW + xSnap.d); }
+          resizeGuideX = xSnap.target;
+        } else {
+          // Fall back to grid snap on moving X edge
+          const g = appState.gridSize;
+          if (movingLeft) {
+            const sx = Math.round(newX / g) * g;
+            newW = Math.max(10, newW + (newX - sx));
+            newX = sx;
+          } else if (movingRight) {
+            const right = newX + newW;
+            newW = Math.max(10, Math.round(right / g) * g - newX);
+          }
+        }
+
+        // Y axis: snap only the moving edge
+        let ySnap: { d: number; target: number } | null = null;
+        if (movingTop)    ySnap = nearestCandidate(newY, yCandidates);
+        if (movingBottom) ySnap = nearestCandidate(newY + newH, yCandidates);
+        if (ySnap) {
+          if (movingTop)    { newH = Math.max(10, newH - ySnap.d); newY += ySnap.d; }
+          if (movingBottom) { newH = Math.max(10, newH + ySnap.d); }
+          resizeGuideY = ySnap.target;
+        } else {
+          const g = appState.gridSize;
+          if (movingTop) {
+            const sy = Math.round(newY / g) * g;
+            newH = Math.max(10, newH + (newY - sy));
+            newY = sy;
+          } else if (movingBottom) {
+            const bottom = newY + newH;
+            newH = Math.max(10, Math.round(bottom / g) * g - newY);
+          }
         }
       }
+
+      const nextResizeGuides: SnapGuide[] = [];
+      if (resizeGuideX !== null) nextResizeGuides.push({ axis: 'x', position: resizeGuideX });
+      if (resizeGuideY !== null) nextResizeGuides.push({ axis: 'y', position: resizeGuideY });
+      snapGuides = nextResizeGuides;
       const comp = appState.components.find(c => c.id === movingIds[0]);
       if (comp) {
         comp.x = newX;
@@ -386,9 +774,13 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
     ctrlDuplicatePending = false;
     resizeHandle = null;
     resizeStartBounds = null;
+    multiResizeStart = null;
+    workspaceResizeStart = null;
+    frameDragState = null;
     rubberBand = null;
     rotatingId = null;
     activeRotation = null;
+    snapGuides = [];
   }
 
   function onKeyDown(e: KeyboardEvent) {
@@ -431,13 +823,21 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
 
   function onContextMenu(e: MouseEvent) {
     e.preventDefault();
-    const pt = screenToCanvas(svgEl, e.clientX, e.clientY);
+    const ptWorld = screenToCanvas(svgEl, e.clientX, e.clientY);
+    const off = getActiveOffset();
+    const pt = { x: ptWorld.x - off.x, y: ptWorld.y - off.y };
     const comp = getComponentAtPoint(pt.x, pt.y);
     if (comp && !isSelected(comp.id)) {
       select(comp.id);
     }
     window.dispatchEvent(new CustomEvent('drawdio-contextmenu', {
-      detail: { x: e.clientX, y: e.clientY, hasSelection: appState.selectedIds.length > 0 }
+      detail: {
+        x: e.clientX,
+        y: e.clientY,
+        hasSelection: appState.selectedIds.length > 0,
+        worldX: ptWorld.x,
+        worldY: ptWorld.y,
+      },
     }));
   }
 

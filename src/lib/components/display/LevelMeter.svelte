@@ -6,10 +6,14 @@
   const segs = $derived((data.properties.segments as number) || 12);
   const gap = 2;
 
+  const greenColor  = $derived((data.properties.greenColor  as string) || '');
+  const yellowColor = $derived((data.properties.yellowColor as string) || '');
+  const redColor    = $derived((data.properties.redColor    as string) || '');
+
   function segColor(pct: number): string {
-    if (pct < 0.6) return 'var(--meter-green)';
-    if (pct < 0.8) return 'var(--meter-yellow)';
-    return 'var(--meter-red)';
+    if (pct < 0.6) return greenColor  || 'var(--meter-green)';
+    if (pct < 0.8) return yellowColor || 'var(--meter-yellow)';
+    return redColor || 'var(--meter-red)';
   }
 </script>
 

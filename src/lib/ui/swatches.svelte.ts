@@ -1,7 +1,8 @@
 // Shared swatch palette used by every ColorField/ColorPicker in the app.
 // Persisted in localStorage under 'drawdio_swatches'.
 
-const DEFAULT_SWATCHES = ['#4fc3f7', '#f06292', '#66bb6a', '#ffa726', '#ef5350', '#ffee58', '#ab47bc', '#ffffff'];
+// Brand-aligned defaults: amber, bone, muted, slate, graphite, meter-green, meter-red, scope-cyan
+const DEFAULT_SWATCHES = ['#FFB800', '#F4F1EA', '#8E93A0', '#2A2D33', '#0E0F12', '#66BB6A', '#EF5350', '#4FC3F7'];
 
 function loadSwatches(): string[] {
   try {

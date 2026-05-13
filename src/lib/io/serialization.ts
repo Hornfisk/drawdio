@@ -1,10 +1,11 @@
-import { appState } from '../state/app.svelte.js';
+import { appState, inferGridDensity, type GridDensity, type Workspace } from '../state/app.svelte.js';
 import { clearSelection } from '../state/selection.js';
 import { clearHistory } from '../state/history.js';
 import type { ComponentData, Group } from '../components/types.js';
 import { createDefaultEffects } from '../components/types.js';
 import { showToast } from '../state/toast.svelte.js';
 import { applyFlatManifest, type FlatManifest } from './flatManifest.js';
+import { syncActiveWorkspace, loadWorkspaces, ensureWorkspace } from '../state/workspaces.js';
 
 // Native File System Access handle (Chromium). Null on unsupported browsers.
 let fileHandle: FileSystemFileHandle | null = null;
@@ -18,19 +19,15 @@ const FILE_PICKER_OPTS = {
 };
 
 export function toJSON() {
+  // Sync the active workspace snapshot from current appState before serialising,
+  // otherwise the active slot would be stale (only inactive workspaces are
+  // updated automatically on switch).
+  ensureWorkspace();
+  syncActiveWorkspace();
   return {
-    drawdio_version: 1,
-    canvas: {
-      width: appState.canvasWidth,
-      height: appState.canvasHeight,
-      bgColor: appState.bgColor,
-      gridSize: appState.gridSize,
-      refImageDataUrl: appState.refImageDataUrl,
-      refImageOpacity: appState.refImageOpacity,
-      refImageVisible: appState.refImageVisible,
-    },
-    components: JSON.parse(JSON.stringify(appState.components)),
-    groups: JSON.parse(JSON.stringify(appState.groups)),
+    drawdio_version: 2,
+    activeWorkspaceId: appState.activeWorkspaceId,
+    workspaces: JSON.parse(JSON.stringify(appState.workspaces)),
   };
 }
 
@@ -45,6 +42,52 @@ export function fromJSON(json: Record<string, unknown>) {
     }
     return;
   }
+  const version = json.drawdio_version;
+
+  // --- V2: multi-workspace ---
+  if (version >= 2 && Array.isArray(json.workspaces)) {
+    const wsList = (json.workspaces as unknown[]).map((raw): Workspace => {
+      const w = raw as Partial<Workspace>;
+      const components = Array.isArray(w.components) ? w.components : [];
+      for (const c of components) if (!c.effects) c.effects = createDefaultEffects();
+      const groups = (Array.isArray(w.groups) ? w.groups : []).map((g) => ({
+        ...g,
+        parent: (g as { parent?: string | null }).parent ?? null,
+      }));
+      let maxNum = 0;
+      for (const c of components) {
+        const m = c.id.match(/_(\d+)$/);
+        if (m) maxNum = Math.max(maxNum, parseInt(m[1]));
+      }
+      const gridSize = typeof w.gridSize === 'number' ? w.gridSize : 32;
+      return {
+        id: w.id || 'workspace_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
+        name: w.name || 'Workspace',
+        x: typeof w.x === 'number' ? w.x : 0,
+        y: typeof w.y === 'number' ? w.y : 0,
+        canvasWidth: w.canvasWidth || 900,
+        canvasHeight: w.canvasHeight || 600,
+        bgColor: w.bgColor || '#0E0F12',
+        gridSize,
+        gridDensity: w.gridDensity ?? inferGridDensity(gridSize),
+        gridVisible: w.gridVisible ?? true,
+        refImageDataUrl: w.refImageDataUrl ?? null,
+        refImageOpacity: w.refImageOpacity ?? 0.5,
+        refImageVisible: w.refImageVisible ?? true,
+        components,
+        groups,
+        nextId: typeof w.nextId === 'number' ? w.nextId : maxNum + 1,
+      };
+    });
+    appState.selectedIds = [];
+    appState.clipboard = [];
+    clearHistory();
+    loadWorkspaces(wsList, typeof json.activeWorkspaceId === 'string' ? json.activeWorkspaceId : undefined);
+    appState.isDirty = false;
+    return;
+  }
+
+  // --- V1: single workspace at top level (legacy) ---
   if (!Array.isArray(json.components) || !Array.isArray(json.groups)) {
     alert('Invalid Drawdio file: malformed components or groups.');
     return;
@@ -52,14 +95,13 @@ export function fromJSON(json: Record<string, unknown>) {
   const data = json as {
     drawdio_version: number;
     canvas?: {
-      width?: number; height?: number; bgColor?: string; gridSize?: number;
+      width?: number; height?: number; bgColor?: string; gridSize?: number; gridDensity?: GridDensity;
       refImageDataUrl?: string | null; refImageOpacity?: number; refImageVisible?: boolean;
     };
     components?: ComponentData[];
     groups?: Group[];
   };
 
-  // Clear state
   appState.components.length = 0;
   appState.groups.length = 0;
   appState.selectedIds = [];
@@ -69,8 +111,9 @@ export function fromJSON(json: Record<string, unknown>) {
   if (data.canvas) {
     appState.canvasWidth = data.canvas.width || 900;
     appState.canvasHeight = data.canvas.height || 600;
-    appState.bgColor = data.canvas.bgColor || '#1a1a1a';
-    appState.gridSize = data.canvas.gridSize || 20;
+    appState.bgColor = data.canvas.bgColor || '#0E0F12';
+    appState.gridSize = data.canvas.gridSize || 32;
+    appState.gridDensity = data.canvas.gridDensity ?? inferGridDensity(appState.gridSize);
     appState.refImageDataUrl = data.canvas.refImageDataUrl ?? null;
     appState.refImageOpacity = data.canvas.refImageOpacity ?? 0.5;
     appState.refImageVisible = data.canvas.refImageVisible ?? true;
@@ -79,7 +122,6 @@ export function fromJSON(json: Record<string, unknown>) {
   if (data.components) {
     let maxNum = 0;
     for (const c of data.components) {
-      // Ensure effects exist (backward compat)
       if (!c.effects) c.effects = createDefaultEffects();
       appState.components.push(c);
       const m = c.id.match(/_(\d+)$/);
@@ -89,8 +131,19 @@ export function fromJSON(json: Record<string, unknown>) {
   }
 
   if (data.groups) {
-    for (const g of data.groups) appState.groups.push(g);
+    for (const g of data.groups) {
+      // Backfill nested-group parent field for legacy files.
+      if ((g as { parent?: string | null }).parent === undefined) {
+        (g as Group).parent = null;
+      }
+      appState.groups.push(g);
+    }
   }
+
+  // Wrap legacy single-workspace state into the new workspaces array.
+  appState.workspaces.length = 0;
+  appState.activeWorkspaceId = '';
+  ensureWorkspace();
 
   clearSelection();
   appState.isDirty = false;
@@ -100,9 +153,14 @@ export function newProject() {
   if (appState.isDirty) {
     if (!confirm('Unsaved changes will be lost. Continue?')) return;
   }
+  // Reset view so the fresh workspace lands in the viewport. fromJSON's
+  // ensureWorkspace() will then pan to the new workspace.
+  appState.zoom = 1;
+  appState.panX = 0;
+  appState.panY = 0;
   fromJSON({
     drawdio_version: 1,
-    canvas: { width: 900, height: 600, bgColor: '#1a1a1a', gridSize: 20, refImageDataUrl: null },
+    canvas: { width: 900, height: 600, bgColor: '#0E0F12', gridSize: 32, gridDensity: 'medium', refImageDataUrl: null },
     components: [],
     groups: [],
   });

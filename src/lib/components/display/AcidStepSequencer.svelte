@@ -27,6 +27,15 @@
 
   const steps = $derived(decodeSteps((data.properties.steps as string) || '', cols));
 
+  // Optional colour slots — empty string falls back to the hard-coded acid palette.
+  const accentColor = $derived((data.properties.accentColor as string) || '#c42a2a');
+  const slideColor  = $derived((data.properties.slideColor  as string) || '#f0dc3c');
+  const restColor   = $derived((data.properties.restColor   as string) || '#d6d6da');
+  const accentInk   = $derived((data.properties.accentInk   as string) || '#fff');
+  const slideInk    = $derived((data.properties.slideInk    as string) || '#141416');
+  const restInk     = $derived((data.properties.restInk     as string) || '#141416');
+  const accentThumbFill = $derived((data.properties.accentThumbFill as string) || '#782818');
+
   function thumbY(sem: number): number {
     const range = Math.max(1, maxNote - minNote);
     const t = 1.0 - Math.max(0, Math.min(1, (sem - minNote) / range));
@@ -52,23 +61,23 @@
 
     <!-- A toggle (accent) -->
     <rect x={cx + 1} y="1" width={tW} height={toggleRowH - 2} rx="1"
-          style="fill: {step.accent ? '#c42a2a' : 'var(--component-inactive)'};"  />
+          style="fill: {step.accent ? accentColor : 'var(--component-inactive)'};"  />
     <text x={cx + 1 + tW / 2} y={1 + (toggleRowH - 2) * 0.73} text-anchor="middle"
-          style="fill: {step.accent ? '#fff' : 'var(--component-label)'};" font-size={tFsz} font-family="monospace">A</text>
+          style="fill: {step.accent ? accentInk : 'var(--component-label)'};" font-size={tFsz} font-family="monospace">A</text>
 
     <!-- S toggle (slide) -->
     {@const s1x = cx + 1 + tW + 1}
     <rect x={s1x} y="1" width={tW} height={toggleRowH - 2} rx="1"
-          style="fill: {step.slide ? '#f0dc3c' : 'var(--component-inactive)'};" />
+          style="fill: {step.slide ? slideColor : 'var(--component-inactive)'};" />
     <text x={s1x + tW / 2} y={1 + (toggleRowH - 2) * 0.73} text-anchor="middle"
-          style="fill: {step.slide ? '#141416' : 'var(--component-label)'};" font-size={tFsz} font-family="monospace">S</text>
+          style="fill: {step.slide ? slideInk : 'var(--component-label)'};" font-size={tFsz} font-family="monospace">S</text>
 
     <!-- R toggle (rest) -->
     {@const s2x = cx + 1 + (tW + 1) * 2}
     <rect x={s2x} y="1" width={tW} height={toggleRowH - 2} rx="1"
-          style="fill: {step.rest ? '#d6d6da' : 'var(--component-inactive)'};" />
+          style="fill: {step.rest ? restColor : 'var(--component-inactive)'};" />
     <text x={s2x + tW / 2} y={1 + (toggleRowH - 2) * 0.73} text-anchor="middle"
-          style="fill: {step.rest ? '#141416' : 'var(--component-label)'};" font-size={tFsz} font-family="monospace">R</text>
+          style="fill: {step.rest ? restInk : 'var(--component-label)'};" font-size={tFsz} font-family="monospace">R</text>
 
     <!-- Pitch slider track -->
     {@const trackX = cx + cellW / 2 - trackW / 2}
@@ -80,7 +89,7 @@
       {@const ty = thumbY(step.semitone)}
       <rect x={cx + cellW / 2 - thumbW / 2} y={ty} width={thumbW} height={thumbH}
             rx="1"
-            style="fill: {step.accent ? '#782818' : 'var(--component-inactive)'}; stroke: {step.accent ? '#c42a2a' : '#d6d6da'}; stroke-width: 0.5;"/>
+            style="fill: {step.accent ? accentThumbFill : 'var(--component-inactive)'}; stroke: {step.accent ? accentColor : restColor}; stroke-width: 0.5;"/>
     {/if}
 
     <!-- Step number -->

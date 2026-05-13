@@ -3,6 +3,7 @@
 
   const SHORTCUTS = [
     { category: 'File', items: [
+      { key: 'Ctrl+N',      desc: 'New project' },
       { key: 'Ctrl+S',      desc: 'Save' },
       { key: 'Ctrl+O',      desc: 'Open…' },
       { key: 'Ctrl+E',      desc: 'Export PNG' },
@@ -11,7 +12,7 @@
     ]},
     { category: 'Edit', items: [
       { key: 'Ctrl+Z',      desc: 'Undo' },
-      { key: 'Ctrl+Shift+Z', desc: 'Redo' },
+      { key: 'Ctrl+Shift+Z / Ctrl+Y', desc: 'Redo' },
       { key: 'Ctrl+C',      desc: 'Copy' },
       { key: 'Ctrl+X',      desc: 'Cut' },
       { key: 'Ctrl+V',      desc: 'Paste (image from clipboard or components)' },
@@ -19,6 +20,7 @@
       { key: 'Ctrl+D',      desc: 'Duplicate' },
       { key: 'Delete',      desc: 'Delete selected' },
       { key: 'Ctrl+A',      desc: 'Select all' },
+      { key: 'Ctrl+L',      desc: 'Lock / unlock selected' },
       { key: 'Escape',      desc: 'Deselect / cancel placing' },
     ]},
     { category: 'Arrange', items: [

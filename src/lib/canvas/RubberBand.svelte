@@ -7,7 +7,9 @@
 
 {#if rb}
   <rect x={rb.x} y={rb.y} width={rb.w} height={rb.h}
-        fill={appState.accentColor} fill-opacity="0.1"
-        stroke={appState.accentColor} stroke-width="0.5"
-        stroke-dasharray="4,3" />
+        fill={appState.accentColor} fill-opacity="0.15"
+        stroke={appState.accentColor} stroke-width="1"
+        vector-effect="non-scaling-stroke"
+        stroke-dasharray="4,3"
+        pointer-events="none" />
 {/if}

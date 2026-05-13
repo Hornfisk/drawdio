@@ -1,10 +1,10 @@
 import { appState } from '../state/app.svelte.js';
-import { selectAll, deleteSelected, clearSelection } from '../state/selection.js';
+import { selectAll, deleteSelected, clearSelection, toggleLockForSelection } from '../state/selection.js';
 import { doCopy, doCut, doPaste, doDuplicate } from '../state/clipboard.js';
 import { undo, redo } from '../state/history.js';
 import { createGroup, ungroupSelected } from '../state/groups.js';
 import { bringForward, sendBackward, bringToFront, sendToBack } from '../state/zorder.js';
-import { save, openProject } from '../io/serialization.js';
+import { save, openProject, newProject } from '../io/serialization.js';
 import { exportPNG, exportSVG, copyJSONToClipboard } from '../io/export.js';
 import { pushHistory } from '../state/history.js';
 import { expandSelection } from '../state/groups.js';
@@ -71,8 +71,8 @@ export function initShortcuts(): () => void {
       return;
     }
 
-    // Ctrl+Shift+Z — redo
-    if (key === 'z' && ctrl && shift) {
+    // Ctrl+Shift+Z or Ctrl+Y — redo
+    if ((key === 'z' && ctrl && shift) || (key === 'y' && ctrl)) {
       redo();
       e.preventDefault();
       return;
@@ -88,6 +88,13 @@ export function initShortcuts(): () => void {
     // Ctrl+A — select all
     if (key === 'a' && ctrl) {
       selectAll();
+      e.preventDefault();
+      return;
+    }
+
+    // Ctrl+L — toggle lock on selection
+    if (key === 'l' && ctrl) {
+      toggleLockForSelection();
       e.preventDefault();
       return;
     }
@@ -183,6 +190,14 @@ export function initShortcuts(): () => void {
     // Ctrl+O — open
     if (key === 'o' && ctrl) {
       openProject();
+      e.preventDefault();
+      return;
+    }
+
+    // Ctrl+N — new project (mirrors ☰ → File → New). Browser may also intercept
+    // this for "new window"; preventDefault wins in most contexts.
+    if (key === 'n' && ctrl) {
+      newProject();
       e.preventDefault();
       return;
     }
