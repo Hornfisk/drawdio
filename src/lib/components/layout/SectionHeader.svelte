@@ -2,7 +2,9 @@
   import type { ComponentData } from '../types.js';
   let { data }: { data: ComponentData } = $props();
 
-  const fs = $derived((data.properties.fontSize as number) || 12);
+  const fsBase = $derived((data.properties.fontSize as number) || 12);
+  // Scale: cap at the configured fontSize, but never wider than width allows.
+  const fs = $derived(Math.min(fsBase, data.width * 0.14, data.height * 0.7));
   const align = $derived((data.properties.align as string) || 'left');
   const tx = $derived(align === 'left' ? 0 : align === 'right' ? data.width : data.width / 2);
   const anchor = $derived(align === 'left' ? 'start' : align === 'right' ? 'end' : 'middle');

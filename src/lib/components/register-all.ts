@@ -198,7 +198,7 @@ export function registerAllComponents(): void {
     displayName: 'Readout',
     defaultProps: {
       width: 72, height: 24, color: '#4fc3f7', label: '',
-      properties: { value: '440', unit: 'Hz', fontSize: 13, cornerRadius: 3, fontFamily: "'VT323', ui-monospace, monospace", align: 'center' },
+      properties: { value: '440', unit: 'Hz', fontSize: 13, cornerRadius: 3, fontFamily: "'VT323', ui-monospace, monospace", align: 'center', bgColor: '#111' },
     },
     editableProperties: [
       { key: 'value', label: 'Value', type: 'text', propPath: 'properties.value' },
@@ -207,6 +207,7 @@ export function registerAllComponents(): void {
       { key: 'cornerRadius', label: 'Corner', type: 'number', propPath: 'properties.cornerRadius', min: 0 },
       { key: 'align', label: 'Align', type: 'select', propPath: 'properties.align', options: ALIGN_OPTIONS },
       { key: 'fontFamily', label: 'Font', type: 'select', propPath: 'properties.fontFamily', options: FONT_OPTIONS },
+      { key: 'bgColor', label: 'BG', type: 'color', propPath: 'properties.bgColor' },
     ],
   });
 
@@ -263,10 +264,21 @@ export function registerAllComponents(): void {
     displayName: 'Spectrum',
     defaultProps: {
       width: 200, height: 80, color: '#4fc3f7', label: '',
-      properties: { bars: 24 },
+      properties: { bars: 24, style: 'bars', customCurveSmooth: true },
     },
     editableProperties: [
-      { key: 'bars', label: 'Bars', type: 'number', propPath: 'properties.bars', min: 1 },
+      { key: 'style', label: 'Style', type: 'select', propPath: 'properties.style', options: [
+        { value: 'bars',   label: 'Bars (EQ)' },
+        { value: 'filled', label: 'Filled (Pro-Q)' },
+        { value: 'line',   label: 'Line + peaks (SPAN)' },
+        { value: 'custom', label: 'Custom curve' },
+      ] },
+      { key: 'bars', label: 'Bars', type: 'number', propPath: 'properties.bars', min: 1,
+        showWhen: { propPath: 'properties.style', equals: 'bars' } },
+      { key: 'customCurve', label: 'Curve', type: 'curve', propPath: 'properties.customCurvePoints',
+        showWhen: { propPath: 'properties.style', equals: 'custom' } },
+      { key: 'customCurveSmooth', label: 'Smooth', type: 'checkbox', propPath: 'properties.customCurveSmooth',
+        showWhen: { propPath: 'properties.style', equals: 'custom' } },
     ],
   });
 
@@ -276,9 +288,20 @@ export function registerAllComponents(): void {
     displayName: 'Waveform',
     defaultProps: {
       width: 200, height: 80, color: '#4fc3f7', label: '',
-      properties: {},
+      properties: { style: 'filled', customCurveSmooth: true },
     },
-    editableProperties: [],
+    editableProperties: [
+      { key: 'style', label: 'Style', type: 'select', propPath: 'properties.style', options: [
+        { value: 'filled',  label: 'Filled (audio clip)' },
+        { value: 'outline', label: 'Outline (scope)' },
+        { value: 'stereo',  label: 'Stereo split' },
+        { value: 'custom',  label: 'Custom curve' },
+      ] },
+      { key: 'customCurve', label: 'Curve', type: 'curve', propPath: 'properties.customCurvePoints',
+        showWhen: { propPath: 'properties.style', equals: 'custom' } },
+      { key: 'customCurveSmooth', label: 'Smooth', type: 'checkbox', propPath: 'properties.customCurveSmooth',
+        showWhen: { propPath: 'properties.style', equals: 'custom' } },
+    ],
   });
 
   // --- Layout (alphabetical by display name) ---

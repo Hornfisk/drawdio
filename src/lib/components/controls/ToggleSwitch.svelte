@@ -9,6 +9,7 @@
   const isOn = $derived(data.properties.default as boolean);
   const thumbR = $derived(Math.max(2, r - 3));
   const thumbX = $derived(isOn ? pillW - r : r);
+  const labelSize = $derived(Math.max(6, Math.min(14, data.width * 0.18)));
 </script>
 
 <g role="switch"
@@ -22,7 +23,7 @@
           style="fill: {isOn ? data.color : 'var(--component-label)'};" />
   {#if data.label}
     <text x={pillW / 2} y={data.height - 2} text-anchor="middle" style="fill: var(--component-label);"
-          font-size="10" font-family="system-ui, sans-serif">{data.label}</text>
+          font-size={labelSize} font-family="system-ui, sans-serif">{data.label}</text>
   {/if}
   <rect x="0" y="0" width={data.width} height={data.height} fill="transparent" />
 </g>

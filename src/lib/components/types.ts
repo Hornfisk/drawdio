@@ -80,6 +80,12 @@ export interface ComponentProperties {
   pitchBend?: boolean;
   modWheel?: boolean;
   pattern?: string;
+  // Display variant style ('filled'|'outline'|'stereo'|'custom' for waveform; 'bars'|'filled'|'line'|'custom' for spectrum)
+  style?: string;
+  // Custom curve points for waveform/spectrum style==='custom'. Flat array of normalized 0..1 [x1,y1,x2,y2,...].
+  customCurvePoints?: number[];
+  // Smooth vs. sharp interpolation for custom curve.
+  customCurveSmooth?: boolean;
   // Index signature for forward-compatibility with custom properties
   [key: string]: unknown;
 }
@@ -122,12 +128,14 @@ export interface Group {
 export interface PropertySpec {
   key: string;
   label: string;
-  type: 'text' | 'number' | 'color' | 'select' | 'checkbox' | 'range';
+  type: 'text' | 'number' | 'color' | 'select' | 'checkbox' | 'range' | 'curve';
   min?: number;
   max?: number;
   step?: number;
   options?: { value: string; label: string }[];
   propPath?: string;
+  /** Show this property only when another property has a specific value. */
+  showWhen?: { propPath: string; equals: unknown };
 }
 
 export function createDefaultEffects(): EffectsData {

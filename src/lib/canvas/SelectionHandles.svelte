@@ -3,7 +3,13 @@
   import { getSelectedComponents } from '../state/derived.svelte.js';
   import { getActiveRotation } from '../interaction/drag.svelte.js';
 
-  const hs = 6; // handle size
+  // Handle size scales inversely with zoom so handles stay ~6 CSS px on screen at any zoom.
+  // Hit target is ~2× larger (transparent) to make clicks forgiving near the edge.
+  const hs    = $derived(6 / appState.zoom);
+  const hsHit = $derived(12 / appState.zoom);
+  const gap   = $derived(3 / appState.zoom);
+  // Constant 0.8 CSS px stroke regardless of zoom — see vector-effect below.
+  const dashedSw = $derived(0.8 / appState.zoom);
 
   interface HandlePos {
     x: number;
@@ -14,14 +20,13 @@
 
   // Handles sit fully outside the dashed border (which is inset by 2px on each side)
   // so they don't obscure the component being resized.
-  const gap = 3;
-  function getHandles(w: number, h: number): HandlePos[] {
-    const left = -2 - gap - hs;
-    const right = w + 2 + gap;
-    const top = -2 - gap - hs;
-    const bottom = h + 2 + gap;
-    const midX = w / 2 - hs / 2;
-    const midY = h / 2 - hs / 2;
+  function getHandles(w: number, h: number, hsv: number, gapv: number): HandlePos[] {
+    const left = -2 - gapv - hsv;
+    const right = w + 2 + gapv;
+    const top = -2 - gapv - hsv;
+    const bottom = h + 2 + gapv;
+    const midX = w / 2 - hsv / 2;
+    const midY = h / 2 - hsv / 2;
     return [
       { x: left,  y: top,    cursor: 'nwse-resize', pos: 'tl' },
       { x: midX,  y: top,    cursor: 'ns-resize',   pos: 'tc' },
@@ -67,6 +72,7 @@
             width={comp.width + 2} height={comp.height + 2}
             fill="none" stroke={accent} stroke-width="0.5"
             stroke-dasharray="3,2" opacity="0.55"
+            vector-effect="non-scaling-stroke"
             pointer-events="none" />
       {#if comp.locked}
         <!-- Tiny lock badge in top-left corner -->
@@ -84,13 +90,20 @@
     <rect x="-2" y="-2"
           width={bbox.w + 4} height={bbox.h + 4}
           fill="none" stroke={accent} stroke-width="1"
-          stroke-dasharray="4,3" />
-    {#each getHandles(bbox.w, bbox.h) as handle}
+          stroke-dasharray="4,3" vector-effect="non-scaling-stroke" />
+    {#each getHandles(bbox.w, bbox.h, hs, gap) as handle}
       {@const isCorner = (handle.pos === 'tl' || handle.pos === 'tr' || handle.pos === 'br' || handle.pos === 'bl')}
+      <!-- Larger transparent hit target -->
+      <rect x={handle.x - (hsHit - hs) / 2} y={handle.y - (hsHit - hs) / 2}
+            width={hsHit} height={hsHit}
+            fill="transparent" data-handle={handle.pos}
+            style="cursor: {handle.cursor};" />
+      <!-- Visible handle (above the hit target so cursor/tooltip still work) -->
       <rect x={handle.x} y={handle.y}
             width={hs} height={hs}
-            fill={accent} stroke={handleFill} stroke-width="1"
-            data-handle={handle.pos} rx="1"
+            fill={accent} stroke={handleFill} stroke-width={dashedSw}
+            data-handle={handle.pos} rx={1 / appState.zoom}
+            vector-effect="non-scaling-stroke"
             style="cursor: {handle.cursor};">
         {#if appState.tooltipsEnabled}
           <title>{isCorner ? 'Drag to scale selection · Shift: lock ratio' : 'Drag to scale selection'}</title>
@@ -109,7 +122,7 @@
       <rect x="-2" y="-2"
             width={comp.width + 4} height={comp.height + 4}
             fill="none" stroke={accent} stroke-width="0.8"
-            stroke-dasharray="4,3" />
+            stroke-dasharray="4,3" vector-effect="non-scaling-stroke" />
 
       <!-- Lock badge when component is locked -->
       {#if comp.locked}
@@ -122,12 +135,19 @@
 
       <!-- Resize handles — hidden when component is rotated or locked -->
       {#if !isRotated && !comp.locked}
-        {#each getHandles(comp.width, comp.height) as handle}
+        {#each getHandles(comp.width, comp.height, hs, gap) as handle}
           {@const isCorner = (handle.pos === 'tl' || handle.pos === 'tr' || handle.pos === 'br' || handle.pos === 'bl')}
+          <!-- Larger transparent hit target -->
+          <rect x={handle.x - (hsHit - hs) / 2} y={handle.y - (hsHit - hs) / 2}
+                width={hsHit} height={hsHit}
+                fill="transparent" data-handle={handle.pos}
+                style="cursor: {handle.cursor};" />
+          <!-- Visible handle -->
           <rect x={handle.x} y={handle.y}
                 width={hs} height={hs}
-                fill={accent} stroke={handleFill} stroke-width="1"
-                data-handle={handle.pos} rx="1"
+                fill={accent} stroke={handleFill} stroke-width={dashedSw}
+                data-handle={handle.pos} rx={1 / appState.zoom}
+                vector-effect="non-scaling-stroke"
                 style="cursor: {handle.cursor};">
             {#if appState.tooltipsEnabled}
               <title>{isCorner ? 'Drag to resize · Shift: lock ratio' : 'Drag to resize'}</title>

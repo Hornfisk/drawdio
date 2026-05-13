@@ -18,4 +18,6 @@ export const FONT_OPTIONS: { value: string; label: string }[] = [
   { value: "'DotGothic16', ui-monospace, monospace",          label: 'DotGothic16 (dot matrix)' },
   { value: "'Press Start 2P', ui-monospace, monospace",       label: 'Press Start 2P (pixel)' },
   { value: "'Micro 5', ui-monospace, monospace",              label: 'Micro 5 (tiny LCD)' },
+  // True 7-segment LED. value_readout enables ghost-segment + bloom when this is picked.
+  { value: "'DSEG7 Classic', ui-monospace, monospace",        label: 'DSEG7 (realistic LED)' },
 ];

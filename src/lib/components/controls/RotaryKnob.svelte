@@ -26,6 +26,8 @@
   const pAngle = -90 * Math.PI / 180;
   const pointerX2 = $derived(cx + pLen * Math.cos(pAngle));
   const pointerY2 = $derived(cy + pLen * Math.sin(pAngle));
+
+  const labelSize = $derived(Math.max(6, Math.min(14, data.width * 0.11)));
 </script>
 
 <g role="slider"
@@ -51,7 +53,7 @@
   <!-- Label -->
   {#if data.label}
     <text x={cx} y={data.height - 2} text-anchor="middle" style="fill: var(--component-label);"
-          font-size="10" font-family="system-ui, sans-serif">{data.label}</text>
+          font-size={labelSize} font-family="system-ui, sans-serif">{data.label}</text>
   {/if}
 
   <!-- Hit area -->
