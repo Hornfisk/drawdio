@@ -17,6 +17,15 @@ export interface RegistryEntry {
   variantGroup?: string;
   /** Short label shown on the variant tab, e.g. "Grid", "Acid" */
   variantLabel?: string;
+  /**
+   * Tight visual bounds in component-local coords (relative to data.x/data.y).
+   * When defined, the selection dashed-rect hugs this rect instead of the full
+   * data.width × data.height box — useful for components that reserve internal
+   * space for labels (knob, slider) where the painted "object" is smaller than
+   * the data bounds. Resize handles still operate on the data bounds.
+   * Returns {x, y, w, h} in local coords; falls back to (0, 0, width, height).
+   */
+  getVisualBounds?: (data: ComponentData) => { x: number; y: number; w: number; h: number };
 }
 
 const entries = new Map<string, RegistryEntry>();

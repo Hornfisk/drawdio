@@ -132,17 +132,19 @@ function detectEqualSpacing(
   const cross = (b: Box) => axis === 'x' ? b.y : b.x;
   const crossSize = (b: Box) => axis === 'x' ? b.h : b.w;
 
-  // Aligned set: components whose perpendicular bounds overlap D's by > 4 px.
-  // This keeps "same row" / "same column" detection tight without requiring
-  // pixel-perfect alignment.
-  const ALIGN_OVERLAP_MIN = 4;
+  // Aligned set: components whose perpendicular bounds overlap D's enough to
+  // count as "same row" / "same column". Threshold is 4px for normal-size
+  // components but relaxes to 30% of the smaller cross-dimension when either
+  // element is tiny (e.g. 8px buttons) — otherwise the absolute floor swallows
+  // small-button rows entirely and gap snap silently never fires.
   const aligned = others.filter(o => {
     const overlap = Math.min(cross(o) + crossSize(o), cross(d) + crossSize(d))
                   - Math.max(cross(o), cross(d));
-    return overlap > ALIGN_OVERLAP_MIN;
+    const minOverlap = Math.min(4, Math.min(crossSize(o), crossSize(d)) * 0.3);
+    return overlap > minOverlap;
   }).sort((a, b) => along(a) - along(b));
 
-  if (aligned.length < 2) return null;
+  if (aligned.length < 1) return null;
 
   let best: { delta: number; guide: EqualSpacingGuide } | null = null;
 
@@ -157,6 +159,34 @@ function detectEqualSpacing(
 
   function segment(loBoxAlongEnd: number, hiBoxAlongStart: number, crossVal: number): EqualSpacingSegment {
     return { from: loBoxAlongEnd, to: hiBoxAlongStart, cross: crossVal };
+  }
+
+  // Single-neighbor case: no pair exists, so we can't infer a user-intended
+  // spacing from the canvas. Snap to a library of conventional UI pixel
+  // spacings instead — typical button-row gaps used in plugin mockups.
+  if (aligned.length === 1) {
+    const COMMON_SPACINGS = [4, 8, 12, 16, 20, 24, 32, 40];
+    const A = aligned[0];
+    const dSize = alongSize(d);
+    const dAlong = along(d);
+    const crossPos = segCross([A, d]);
+    for (const spacing of COMMON_SPACINGS) {
+      // D after A: gap runs from A's far edge to D's near edge.
+      const targetAfter = along(A) + alongSize(A) + spacing;
+      // D before A: gap runs from D's far edge to A's near edge.
+      const targetBefore = along(A) - spacing - dSize;
+      const tries: Array<{ target: number; from: number; to: number }> = [
+        { target: targetAfter,  from: along(A) + alongSize(A), to: targetAfter },
+        { target: targetBefore, from: targetBefore + dSize,    to: along(A) },
+      ];
+      for (const t of tries) {
+        const delta = t.target - dAlong;
+        if (Math.abs(delta) > threshold) continue;
+        if (best && Math.abs(delta) >= Math.abs(best.delta)) continue;
+        best = { delta, guide: { axis, segments: [segment(t.from, t.to, crossPos)] } };
+      }
+    }
+    return best;
   }
 
   for (let i = 0; i < aligned.length - 1; i++) {
@@ -662,6 +692,17 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       }
       equalSpacingGuides = nextEqGuides;
 
+      // Compute grid-snap delta ONCE from the reference component (movingStarts[0])
+      // so multi-select drags stay rigid. Per-element grid snap rounds each item
+      // to its own nearest grid point and items drift apart.
+      let snapDx: number = alignDx ?? 0;
+      let snapDy: number = alignDy ?? 0;
+      if (!altHeld && movingStarts.length > 0 && (alignDx === null || alignDy === null)) {
+        const ref = movingStarts[0];
+        const refGridSnapped = snap(ref.x + dx, ref.y + dy);
+        if (alignDx === null) snapDx = refGridSnapped.x - (ref.x + dx);
+        if (alignDy === null) snapDy = refGridSnapped.y - (ref.y + dy);
+      }
       for (const start of movingStarts) {
         const comp = appState.components.find(c => c.id === start.id);
         if (!comp) continue;
@@ -669,9 +710,8 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
           comp.x = start.x + dx;
           comp.y = start.y + dy;
         } else {
-          const gridSnapped = snap(start.x + dx, start.y + dy);
-          comp.x = alignDx !== null ? start.x + dx + alignDx : gridSnapped.x;
-          comp.y = alignDy !== null ? start.y + dy + alignDy : gridSnapped.y;
+          comp.x = start.x + dx + snapDx;
+          comp.y = start.y + dy + snapDy;
         }
       }
     } else if (state === 'selecting' && rubberBand) {

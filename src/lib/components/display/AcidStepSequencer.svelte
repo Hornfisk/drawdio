@@ -9,7 +9,9 @@
   const maxNote = $derived((data.properties.maxNote as number) ?? 60);
 
   const gap        = 1;
-  const cellW      = $derived((data.width - (cols - 1) * gap) / cols);
+  // 4px hard floor: prevents negative cellW (and downstream NaN/negative-width
+  // rects) when the user drags the component narrower than cols * (4 + gap).
+  const cellW      = $derived(Math.max(4, (data.width - (cols - 1) * gap) / cols));
   const toggleRowH = $derived(Math.max(10, data.height * 0.22));
   const numRowH    = $derived(Math.max(8,  data.height * 0.13));
   const sliderRowH = $derived(data.height - toggleRowH - numRowH);

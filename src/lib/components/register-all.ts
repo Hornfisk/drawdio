@@ -76,6 +76,12 @@ export function registerAllComponents(): void {
       { key: 'default', label: 'Default', type: 'number', propPath: 'properties.default' },
       { key: 'unit', label: 'Unit', type: 'text', propPath: 'properties.unit' },
     ],
+    // Mirrors VerticalSlider.svelte: track fills width × (height - labelH);
+    // label sits in the bottom band.
+    getVisualBounds: (data) => {
+      const labelH = data.label ? 14 : 0;
+      return { x: 0, y: 0, w: data.width, h: Math.max(0, data.height - labelH) };
+    },
   });
 
   register('midi_keyboard', {
@@ -114,6 +120,19 @@ export function registerAllComponents(): void {
       { key: 'default', label: 'Default', type: 'number', propPath: 'properties.default' },
       { key: 'unit', label: 'Unit', type: 'text', propPath: 'properties.unit' },
     ],
+    // Mirrors RotaryKnob.svelte's internal layout: knob is a centered square
+    // of size min(width, height - labelH) at the top; label sits in the
+    // remaining band below. Selection rect hugs just the knob.
+    getVisualBounds: (data) => {
+      const labelH = data.label ? 14 : 0;
+      const knobSize = Math.min(data.width, data.height - labelH);
+      return {
+        x: (data.width - knobSize) / 2,
+        y: 0,
+        w: knobSize,
+        h: knobSize,
+      };
+    },
   });
 
   register('toggle_switch', {
@@ -127,6 +146,12 @@ export function registerAllComponents(): void {
     editableProperties: [
       { key: 'default', label: 'On', type: 'checkbox', propPath: 'properties.default' },
     ],
+    // Mirrors ToggleSwitch.svelte: pill fills width × max(8, height - labelH);
+    // label sits in the bottom band.
+    getVisualBounds: (data) => {
+      const labelH = data.label ? 14 : 0;
+      return { x: 0, y: 0, w: data.width, h: Math.max(8, data.height - labelH) };
+    },
   });
 
   register('xy_pad', {
@@ -173,6 +198,12 @@ export function registerAllComponents(): void {
     editableProperties: [
       { key: 'on', label: 'On', type: 'checkbox', propPath: 'properties.on' },
     ],
+    // Mirrors LedIndicator.svelte: a circle of diameter min(w, h) anchored
+    // top-left. When width != height, the rest of the data box is empty.
+    getVisualBounds: (data) => {
+      const d = Math.min(data.width, data.height);
+      return { x: 0, y: 0, w: d, h: d };
+    },
   });
 
   register('level_meter', {
