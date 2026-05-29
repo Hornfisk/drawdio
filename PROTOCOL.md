@@ -53,4 +53,4 @@ Messages:
 A host adapter must: (1) write the manifest with stable dotted ids, (2) read
 positions back via the manifest as **overrides on top of code fallbacks** (so the
 host runs unchanged with no manifest), and (3) optionally dump the backdrop PNG.
-See `adapters/juce/drawdio_layout/README.md` for the JUCE reference adapter.
+See `adapters/juce/drawdio_layout/README.md` for the JUCE reference adapter (forthcoming).

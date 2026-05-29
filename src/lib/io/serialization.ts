@@ -362,9 +362,9 @@ export function importFlatManifest(): void {
           alert('No entries found in ' + file.name + '.\n\n'
             + 'The file is a valid JSON object but contains no '
             + '{x, y, w, h} rects under any namespace.\n\n'
-            + 'Flat manifests are populated by the source app — e.g. in '
-            + 'SquelchPro, Layout.json stays empty until you drag a '
-            + 'component in the plugin and save. Once the file has entries, '
+            + 'Flat manifests are populated by the source app — e.g. with the '
+            + 'layout bridge, the manifest stays empty until a component is '
+            + 'added and the file is saved. Once the file has entries, '
             + 'drawdio can edit them.');
           return;
         }
