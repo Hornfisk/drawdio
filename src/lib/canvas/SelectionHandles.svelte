@@ -2,8 +2,35 @@
   import { appState } from '../state/app.svelte.js';
   import { getSelectedComponents } from '../state/derived.svelte.js';
   import { getActiveRotation } from '../interaction/drag.svelte.js';
+  import { getEntry } from '../components/registry.js';
+  import type { ComponentData } from '../components/types.js';
 
-  const hs = 6; // handle size
+  // Per-component visual bounds (LOCAL coords, relative to comp.x/comp.y).
+  // For components that reserve internal label space (knob, etc.), this is
+  // smaller than the full data bounds. Falls back to (0, 0, w, h).
+  function visualLocal(c: ComponentData): { x: number; y: number; w: number; h: number } {
+    const fn = getEntry(c.type)?.getVisualBounds;
+    if (fn) return fn(c);
+    return { x: 0, y: 0, w: c.width, h: c.height };
+  }
+
+  // Handle size scales inversely with zoom so handles stay ~6 CSS px on screen at any zoom.
+  // Hit target is ~2× larger (transparent) to make clicks forgiving near the edge.
+  const hs    = $derived(6 / appState.zoom);
+  const hsHit = $derived(12 / appState.zoom);
+  const gap   = $derived(3 / appState.zoom);
+  // Constant 0.8 CSS px stroke regardless of zoom — see vector-effect below.
+  const dashedSw = $derived(0.8 / appState.zoom);
+
+  // Shrink handles when the rendered component is small on screen, otherwise
+  // they (and their hit targets) eclipse the component and block clicks on
+  // anything adjacent. Returns a scalar in [0.3, 1] applied to hs/hsHit/gap.
+  // At ≥24 CSS px min-dimension on screen: full-size handles.
+  // At ≤4 CSS px: clamped to 0.3 (tiny but visible/grabbable).
+  function handleScale(w: number, h: number): number {
+    const minCss = Math.min(w, h) * appState.zoom;
+    return Math.min(1, Math.max(0.3, (minCss - 4) / 20));
+  }
 
   interface HandlePos {
     x: number;
@@ -14,14 +41,13 @@
 
   // Handles sit fully outside the dashed border (which is inset by 2px on each side)
   // so they don't obscure the component being resized.
-  const gap = 3;
-  function getHandles(w: number, h: number): HandlePos[] {
-    const left = -2 - gap - hs;
-    const right = w + 2 + gap;
-    const top = -2 - gap - hs;
-    const bottom = h + 2 + gap;
-    const midX = w / 2 - hs / 2;
-    const midY = h / 2 - hs / 2;
+  function getHandles(w: number, h: number, hsv: number, gapv: number): HandlePos[] {
+    const left = -2 - gapv - hsv;
+    const right = w + 2 + gapv;
+    const top = -2 - gapv - hsv;
+    const bottom = h + 2 + gapv;
+    const midX = w / 2 - hsv / 2;
+    const midY = h / 2 - hsv / 2;
     return [
       { x: left,  y: top,    cursor: 'nwse-resize', pos: 'tl' },
       { x: midX,  y: top,    cursor: 'ns-resize',   pos: 'tc' },
@@ -42,10 +68,9 @@
   const selectedComps = $derived(getSelectedComponents());
   const multi = $derived(selectedComps.length > 1);
 
-  // Union bounding box (axis-aligned, ignores rotation).
-  // For a multi-selection that includes rotated components, the bbox hugs
-  // their unrotated x/y/w/h — acceptable since rotated bounds would require
-  // matrix math and visually wouldn't change resize behavior meaningfully.
+  // Data union — drives handle positions and the `<g>` translate so the
+  // resize handler in drag.svelte.ts (which recaptures from data bounds)
+  // stays consistent with what the user grabs.
   const bbox = $derived.by(() => {
     if (!multi || selectedComps.length === 0) return null;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -57,16 +82,34 @@
     }
     return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
   });
+
+  // Visual union — drives the dashed selection rect so it hugs the painted
+  // shapes (knob circles etc.) rather than the data box reserved for labels.
+  const visualBbox = $derived.by(() => {
+    if (!multi || selectedComps.length === 0) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const c of selectedComps) {
+      const vb = visualLocal(c);
+      minX = Math.min(minX, c.x + vb.x);
+      minY = Math.min(minY, c.y + vb.y);
+      maxX = Math.max(maxX, c.x + vb.x + vb.w);
+      maxY = Math.max(maxY, c.y + vb.y + vb.h);
+    }
+    return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+  });
 </script>
 
 {#if multi && bbox}
-  <!-- Faint per-component outlines so user can see what's in the multi-selection -->
+  <!-- Faint per-component outlines so user can see what's in the multi-selection.
+       Hugs each component's visual bounds (no outset) so the shapes are tight. -->
   {#each selectedComps as comp (comp.id)}
+    {@const vb = visualLocal(comp)}
     <g transform="translate({comp.x}, {comp.y}) rotate({comp.rotation || 0}, {comp.width / 2}, {comp.height / 2})">
-      <rect x="-1" y="-1"
-            width={comp.width + 2} height={comp.height + 2}
+      <rect x={vb.x} y={vb.y}
+            width={vb.w} height={vb.h}
             fill="none" stroke={accent} stroke-width="0.5"
             stroke-dasharray="3,2" opacity="0.55"
+            vector-effect="non-scaling-stroke"
             pointer-events="none" />
       {#if comp.locked}
         <!-- Tiny lock badge in top-left corner -->
@@ -79,18 +122,34 @@
     </g>
   {/each}
 
-  <!-- Union bbox + handles -->
+  <!-- Union bbox + handles.
+       <g> translates to the DATA bbox so handle positions match what
+       drag.svelte.ts captures on resize-start. The dashed rect renders at
+       VISUAL-bbox offsets (in local coords) so it hugs painted content. -->
+  {@const bScale  = handleScale(bbox.w, bbox.h)}
+  {@const bHs     = hs * bScale}
+  {@const bHsHit  = hsHit * bScale}
+  {@const bGap    = gap * bScale}
   <g data-selection-for="__multi__" transform="translate({bbox.x}, {bbox.y})">
-    <rect x="-2" y="-2"
-          width={bbox.w + 4} height={bbox.h + 4}
-          fill="none" stroke={accent} stroke-width="1"
-          stroke-dasharray="4,3" />
-    {#each getHandles(bbox.w, bbox.h) as handle}
+    {#if visualBbox}
+      <rect x={visualBbox.x - bbox.x} y={visualBbox.y - bbox.y}
+            width={visualBbox.w} height={visualBbox.h}
+            fill="none" stroke={accent} stroke-width="1"
+            stroke-dasharray="4,3" vector-effect="non-scaling-stroke" />
+    {/if}
+    {#each getHandles(bbox.w, bbox.h, bHs, bGap) as handle}
       {@const isCorner = (handle.pos === 'tl' || handle.pos === 'tr' || handle.pos === 'br' || handle.pos === 'bl')}
+      <!-- Larger transparent hit target -->
+      <rect x={handle.x - (bHsHit - bHs) / 2} y={handle.y - (bHsHit - bHs) / 2}
+            width={bHsHit} height={bHsHit}
+            fill="transparent" data-handle={handle.pos}
+            style="cursor: {handle.cursor};" />
+      <!-- Visible handle (above the hit target so cursor/tooltip still work) -->
       <rect x={handle.x} y={handle.y}
-            width={hs} height={hs}
-            fill={accent} stroke={handleFill} stroke-width="1"
-            data-handle={handle.pos} rx="1"
+            width={bHs} height={bHs}
+            fill={accent} stroke={handleFill} stroke-width={dashedSw}
+            data-handle={handle.pos} rx={1 / appState.zoom}
+            vector-effect="non-scaling-stroke"
             style="cursor: {handle.cursor};">
         {#if appState.tooltipsEnabled}
           <title>{isCorner ? 'Drag to scale selection · Shift: lock ratio' : 'Drag to scale selection'}</title>
@@ -102,14 +161,15 @@
   {#each selectedComps as comp (comp.id)}
     {@const rot = comp.rotation || 0}
     {@const isRotated = rot !== 0}
+    {@const vb = visualLocal(comp)}
     <g data-selection-for={comp.id}
        transform="translate({comp.x}, {comp.y}) rotate({rot}, {comp.width / 2}, {comp.height / 2})">
 
-      <!-- Dashed border -->
-      <rect x="-2" y="-2"
-            width={comp.width + 4} height={comp.height + 4}
+      <!-- Dashed border — hugs the component's visual bounds (no outset). -->
+      <rect x={vb.x} y={vb.y}
+            width={vb.w} height={vb.h}
             fill="none" stroke={accent} stroke-width="0.8"
-            stroke-dasharray="4,3" />
+            stroke-dasharray="4,3" vector-effect="non-scaling-stroke" />
 
       <!-- Lock badge when component is locked -->
       {#if comp.locked}
@@ -122,12 +182,23 @@
 
       <!-- Resize handles — hidden when component is rotated or locked -->
       {#if !isRotated && !comp.locked}
-        {#each getHandles(comp.width, comp.height) as handle}
+        {@const cScale = handleScale(comp.width, comp.height)}
+        {@const cHs    = hs * cScale}
+        {@const cHsHit = hsHit * cScale}
+        {@const cGap   = gap * cScale}
+        {#each getHandles(comp.width, comp.height, cHs, cGap) as handle}
           {@const isCorner = (handle.pos === 'tl' || handle.pos === 'tr' || handle.pos === 'br' || handle.pos === 'bl')}
+          <!-- Larger transparent hit target -->
+          <rect x={handle.x - (cHsHit - cHs) / 2} y={handle.y - (cHsHit - cHs) / 2}
+                width={cHsHit} height={cHsHit}
+                fill="transparent" data-handle={handle.pos}
+                style="cursor: {handle.cursor};" />
+          <!-- Visible handle -->
           <rect x={handle.x} y={handle.y}
-                width={hs} height={hs}
-                fill={accent} stroke={handleFill} stroke-width="1"
-                data-handle={handle.pos} rx="1"
+                width={cHs} height={cHs}
+                fill={accent} stroke={handleFill} stroke-width={dashedSw}
+                data-handle={handle.pos} rx={1 / appState.zoom}
+                vector-effect="non-scaling-stroke"
                 style="cursor: {handle.cursor};">
             {#if appState.tooltipsEnabled}
               <title>{isCorner ? 'Drag to resize · Shift: lock ratio' : 'Drag to resize'}</title>

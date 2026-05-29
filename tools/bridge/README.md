@@ -26,7 +26,7 @@ node tools/bridge/server.mjs /path/to/Layout.json
 Then, in drawdio's toolbar → ☰ → **Bridge** → **Connect**. Paste the same path into the "Target file" field for the launch-command helper.
 
 Env vars:
-- `BRIDGE_TARGET` — absolute path to the JSON file to sync. Default `./Layout.json`. (`SQUELCH_LAYOUT` is still accepted as a legacy alias.)
+- `BRIDGE_TARGET` — absolute path to the JSON file to sync. Default `./Layout.json`.
 - `BRIDGE_PORT` — WS port. Default `7878`.
 
 The server prints:

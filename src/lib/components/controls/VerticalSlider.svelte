@@ -11,6 +11,7 @@
   const pct = 0.5;
   const fillH = $derived(trackH * pct);
   const thumbY = $derived(trackH * (1 - pct) - thumbH / 2);
+  const labelSize = $derived(Math.max(6, Math.min(14, data.width * 0.16)));
 </script>
 
 <g role="slider"
@@ -26,7 +27,7 @@
         rx="2" style="fill: var(--key-white);" stroke={data.color} stroke-width="1.5" />
   {#if data.label}
     <text x={data.width / 2} y={data.height - 2} text-anchor="middle" style="fill: var(--component-label);"
-          font-size="10" font-family="system-ui, sans-serif">{data.label}</text>
+          font-size={labelSize} font-family="system-ui, sans-serif">{data.label}</text>
   {/if}
   <rect x="0" y="0" width={data.width} height={data.height} fill="transparent" />
 </g>

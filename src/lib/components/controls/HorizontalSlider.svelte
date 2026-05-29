@@ -10,6 +10,7 @@
   const trackWidth = $derived(data.width - thumbR * 2);
   const pct = 0.5;
   const thumbCx = $derived(thumbR + trackWidth * pct);
+  const labelSize = $derived(Math.max(6, Math.min(14, data.width * 0.11)));
 </script>
 
 <g role="slider"
@@ -35,7 +36,7 @@
   <!-- Label -->
   {#if data.label}
     <text x={data.width / 2} y={data.height - 2} text-anchor="middle" style="fill: var(--component-label);"
-          font-size="10" font-family="system-ui, sans-serif">{data.label}</text>
+          font-size={labelSize} font-family="system-ui, sans-serif">{data.label}</text>
   {/if}
 
   <!-- Hit area -->

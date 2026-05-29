@@ -74,6 +74,8 @@ export function fromJSON(json: Record<string, unknown>) {
         refImageDataUrl: w.refImageDataUrl ?? null,
         refImageOpacity: w.refImageOpacity ?? 0.5,
         refImageVisible: w.refImageVisible ?? true,
+        refImageOffsetX: typeof w.refImageOffsetX === 'number' ? w.refImageOffsetX : 0,
+        refImageOffsetY: typeof w.refImageOffsetY === 'number' ? w.refImageOffsetY : 0,
         components,
         groups,
         nextId: typeof w.nextId === 'number' ? w.nextId : maxNum + 1,
@@ -97,6 +99,7 @@ export function fromJSON(json: Record<string, unknown>) {
     canvas?: {
       width?: number; height?: number; bgColor?: string; gridSize?: number; gridDensity?: GridDensity;
       refImageDataUrl?: string | null; refImageOpacity?: number; refImageVisible?: boolean;
+      refImageOffsetX?: number; refImageOffsetY?: number;
     };
     components?: ComponentData[];
     groups?: Group[];
@@ -117,6 +120,8 @@ export function fromJSON(json: Record<string, unknown>) {
     appState.refImageDataUrl = data.canvas.refImageDataUrl ?? null;
     appState.refImageOpacity = data.canvas.refImageOpacity ?? 0.5;
     appState.refImageVisible = data.canvas.refImageVisible ?? true;
+    appState.refImageOffsetX = data.canvas.refImageOffsetX ?? 0;
+    appState.refImageOffsetY = data.canvas.refImageOffsetY ?? 0;
   }
 
   if (data.components) {
@@ -357,9 +362,9 @@ export function importFlatManifest(): void {
           alert('No entries found in ' + file.name + '.\n\n'
             + 'The file is a valid JSON object but contains no '
             + '{x, y, w, h} rects under any namespace.\n\n'
-            + 'Flat manifests are populated by the source app — e.g. in '
-            + 'SquelchPro, Layout.json stays empty until you drag a '
-            + 'component in the plugin and save. Once the file has entries, '
+            + 'Flat manifests are populated by the source app — e.g. with the '
+            + 'layout bridge, the manifest stays empty until a component is '
+            + 'added and the file is saved. Once the file has entries, '
             + 'drawdio can edit them.');
           return;
         }

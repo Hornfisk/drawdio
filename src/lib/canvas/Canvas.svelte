@@ -234,6 +234,8 @@
       {@const refUrl = isActive ? appState.refImageDataUrl : ws.refImageDataUrl}
       {@const refOpacity = isActive ? appState.refImageOpacity : ws.refImageOpacity}
       {@const refVisible = isActive ? appState.refImageVisible : ws.refImageVisible}
+      {@const refOffsetX = isActive ? appState.refImageOffsetX : ws.refImageOffsetX}
+      {@const refOffsetY = isActive ? appState.refImageOffsetY : ws.refImageOffsetY}
 
       <g transform="translate({ws.x}, {ws.y})"
          data-workspace-id={ws.id}
@@ -286,7 +288,7 @@
         {#if refUrl && refVisible}
           <image id={isActive ? 'ref-image' : null}
                  href={refUrl}
-                 x="0" y="0"
+                 x={refOffsetX} y={refOffsetY}
                  width={w} height={h}
                  opacity={refOpacity}
                  preserveAspectRatio="xMidYMid slice"

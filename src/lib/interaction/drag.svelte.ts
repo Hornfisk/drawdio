@@ -90,12 +90,151 @@ let activeRotation = $state<number | null>(null);
 export type SnapGuide = { axis: 'x' | 'y'; position: number };
 let snapGuides = $state<SnapGuide[]>([]);
 
+// Equal-spacing guides — Figma/Kittl style. Each guide carries two segments of
+// equal length on the same axis; both render in magenta so the user can see the
+// "these gaps are equal" relationship at a glance. cross = perpendicular position
+// where the segment line is drawn (e.g. for axis='x', cross is the Y).
+export type EqualSpacingSegment = { from: number; to: number; cross: number };
+export type EqualSpacingGuide = { axis: 'x' | 'y'; segments: EqualSpacingSegment[] };
+let equalSpacingGuides = $state<EqualSpacingGuide[]>([]);
+export function getEqualSpacingGuides() { return equalSpacingGuides; }
+
 export function getRubberBand() { return rubberBand; }
 export function getActiveRotation() { return activeRotation; }
 export function getSnapGuides(): SnapGuide[] { return snapGuides; }
 
 function normalizeAngle(a: number): number {
   return ((a % 360) + 360) % 360;
+}
+
+// ---------------------------------------------------------------------------
+// Equal-spacing snap detection. Figma/Kittl-style: when dragging element D, if
+// D's gap to a neighbor matches a gap between two OTHER elements on the same
+// row/column, snap to that exact distance and surface both equal segments for
+// the SnapGuides overlay to draw in magenta.
+//
+// `axis: 'x'` detects horizontal spacing among elements that vertically overlap
+// D (i.e. the same row); `axis: 'y'` is the transpose.
+// ---------------------------------------------------------------------------
+
+type Box = { x: number; y: number; w: number; h: number };
+
+function detectEqualSpacing(
+  axis: 'x' | 'y',
+  d: Box,
+  others: Box[],
+  threshold: number,
+): { delta: number; guide: EqualSpacingGuide } | null {
+  // Helpers that fold axis selection — `along` is the primary axis, `cross` is
+  // the perpendicular one. For axis='x', along=x/w, cross=y/h.
+  const along = (b: Box) => axis === 'x' ? b.x : b.y;
+  const alongSize = (b: Box) => axis === 'x' ? b.w : b.h;
+  const cross = (b: Box) => axis === 'x' ? b.y : b.x;
+  const crossSize = (b: Box) => axis === 'x' ? b.h : b.w;
+
+  // Aligned set: components whose perpendicular bounds overlap D's enough to
+  // count as "same row" / "same column". Threshold is 4px for normal-size
+  // components but relaxes to 30% of the smaller cross-dimension when either
+  // element is tiny (e.g. 8px buttons) — otherwise the absolute floor swallows
+  // small-button rows entirely and gap snap silently never fires.
+  const aligned = others.filter(o => {
+    const overlap = Math.min(cross(o) + crossSize(o), cross(d) + crossSize(d))
+                  - Math.max(cross(o), cross(d));
+    const minOverlap = Math.min(4, Math.min(crossSize(o), crossSize(d)) * 0.3);
+    return overlap > minOverlap;
+  }).sort((a, b) => along(a) - along(b));
+
+  if (aligned.length < 1) return null;
+
+  let best: { delta: number; guide: EqualSpacingGuide } | null = null;
+
+  // Build the perpendicular position where guide segments will render —
+  // midpoint of the involved elements' cross extents, so guides sit visually
+  // between/on the row of components.
+  function segCross(boxes: Box[]): number {
+    const lo = Math.max(...boxes.map(cross));
+    const hi = Math.min(...boxes.map(b => cross(b) + crossSize(b)));
+    return (lo + hi) / 2;
+  }
+
+  function segment(loBoxAlongEnd: number, hiBoxAlongStart: number, crossVal: number): EqualSpacingSegment {
+    return { from: loBoxAlongEnd, to: hiBoxAlongStart, cross: crossVal };
+  }
+
+  // Single-neighbor case: no pair exists, so we can't infer a user-intended
+  // spacing from the canvas. Snap to a library of conventional UI pixel
+  // spacings instead — typical button-row gaps used in plugin mockups.
+  if (aligned.length === 1) {
+    const COMMON_SPACINGS = [4, 8, 12, 16, 20, 24, 32, 40];
+    const A = aligned[0];
+    const dSize = alongSize(d);
+    const dAlong = along(d);
+    const crossPos = segCross([A, d]);
+    for (const spacing of COMMON_SPACINGS) {
+      // D after A: gap runs from A's far edge to D's near edge.
+      const targetAfter = along(A) + alongSize(A) + spacing;
+      // D before A: gap runs from D's far edge to A's near edge.
+      const targetBefore = along(A) - spacing - dSize;
+      const tries: Array<{ target: number; from: number; to: number }> = [
+        { target: targetAfter,  from: along(A) + alongSize(A), to: targetAfter },
+        { target: targetBefore, from: targetBefore + dSize,    to: along(A) },
+      ];
+      for (const t of tries) {
+        const delta = t.target - dAlong;
+        if (Math.abs(delta) > threshold) continue;
+        if (best && Math.abs(delta) >= Math.abs(best.delta)) continue;
+        best = { delta, guide: { axis, segments: [segment(t.from, t.to, crossPos)] } };
+      }
+    }
+    return best;
+  }
+
+  for (let i = 0; i < aligned.length - 1; i++) {
+    const A = aligned[i];
+    const B = aligned[i + 1];
+    const gap = along(B) - (along(A) + alongSize(A));
+    if (gap <= 0) continue; // overlapping pair — not a usable spacing
+
+    // Candidates expressed as the target value for `along(d)`:
+    //   extR: D after B (extend pair rightward) — D.along = B.along + B.size + gap
+    //   extL: D before A (extend pair leftward) — D.along = A.along - gap - D.size
+    //   fill: D between A and B — D.along = A.along + A.size + (gap - D.size) / 2
+    const dSize = alongSize(d);
+    const dAlong = along(d);
+    const candidates: Array<{ target: number; kind: 'extR' | 'extL' | 'fill' }> = [
+      { target: along(B) + alongSize(B) + gap,       kind: 'extR' },
+      { target: along(A) - gap - dSize,              kind: 'extL' },
+    ];
+    if (gap > dSize + 2) {
+      candidates.push({ target: along(A) + alongSize(A) + (gap - dSize) / 2, kind: 'fill' });
+    }
+
+    for (const cand of candidates) {
+      const delta = cand.target - dAlong;
+      if (Math.abs(delta) > threshold) continue;
+      if (best && Math.abs(delta) >= Math.abs(best.delta)) continue;
+
+      // Build both equal segments for the visual.
+      let seg1: EqualSpacingSegment, seg2: EqualSpacingSegment;
+      const crossPos = segCross([A, B, d]);
+      const dEndAtCand = cand.target + dSize;
+
+      if (cand.kind === 'extR') {
+        seg1 = segment(along(A) + alongSize(A), along(B), crossPos);
+        seg2 = segment(along(B) + alongSize(B), cand.target, crossPos);
+      } else if (cand.kind === 'extL') {
+        seg1 = segment(along(A) + alongSize(A), along(B), crossPos);
+        seg2 = segment(dEndAtCand, along(A), crossPos);
+      } else { // fill
+        seg1 = segment(along(A) + alongSize(A), cand.target, crossPos);
+        seg2 = segment(dEndAtCand, along(B), crossPos);
+      }
+
+      best = { delta, guide: { axis, segments: [seg1, seg2] } };
+    }
+  }
+
+  return best;
 }
 
 export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => void {
@@ -513,6 +652,57 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
       if (guideY !== null) nextGuides.push({ axis: 'y', position: guideY });
       snapGuides = nextGuides;
 
+      // Equal-spacing snap — only on axes where edge-alignment didn't already
+      // win. Edge alignment is a "stronger" intent (aligning edges directly)
+      // so equal spacing yields. Build the dragged box fresh per axis with any
+      // already-applied snap deltas folded in.
+      const nextEqGuides: EqualSpacingGuide[] = [];
+      if (!altHeld && movingStarts.length > 0) {
+        const movingSet = new Set(movingIds);
+        const ref = movingStarts[0];
+        const refComp = appState.components.find(c => c.id === ref.id);
+        if (refComp) {
+          const w = refComp.width, h = refComp.height;
+          const threshold = 6 / appState.zoom;
+          const others: Box[] = [];
+          for (const c of appState.components) {
+            if (movingSet.has(c.id)) continue;
+            others.push({ x: c.x, y: c.y, w: c.width, h: c.height });
+          }
+          const makeBox = (): Box => ({
+            x: ref.x + dx + (alignDx ?? 0),
+            y: ref.y + dy + (alignDy ?? 0),
+            w, h,
+          });
+          if (alignDx === null) {
+            const r = detectEqualSpacing('x', makeBox(), others, threshold);
+            if (r) {
+              alignDx = r.delta;
+              nextEqGuides.push(r.guide);
+            }
+          }
+          if (alignDy === null) {
+            const r = detectEqualSpacing('y', makeBox(), others, threshold);
+            if (r) {
+              alignDy = r.delta;
+              nextEqGuides.push(r.guide);
+            }
+          }
+        }
+      }
+      equalSpacingGuides = nextEqGuides;
+
+      // Compute grid-snap delta ONCE from the reference component (movingStarts[0])
+      // so multi-select drags stay rigid. Per-element grid snap rounds each item
+      // to its own nearest grid point and items drift apart.
+      let snapDx: number = alignDx ?? 0;
+      let snapDy: number = alignDy ?? 0;
+      if (!altHeld && movingStarts.length > 0 && (alignDx === null || alignDy === null)) {
+        const ref = movingStarts[0];
+        const refGridSnapped = snap(ref.x + dx, ref.y + dy);
+        if (alignDx === null) snapDx = refGridSnapped.x - (ref.x + dx);
+        if (alignDy === null) snapDy = refGridSnapped.y - (ref.y + dy);
+      }
       for (const start of movingStarts) {
         const comp = appState.components.find(c => c.id === start.id);
         if (!comp) continue;
@@ -520,9 +710,8 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
           comp.x = start.x + dx;
           comp.y = start.y + dy;
         } else {
-          const gridSnapped = snap(start.x + dx, start.y + dy);
-          comp.x = alignDx !== null ? start.x + dx + alignDx : gridSnapped.x;
-          comp.y = alignDy !== null ? start.y + dy + alignDy : gridSnapped.y;
+          comp.x = start.x + dx + snapDx;
+          comp.y = start.y + dy + snapDy;
         }
       }
     } else if (state === 'selecting' && rubberBand) {
@@ -781,6 +970,7 @@ export function initDrag(svgEl: SVGSVGElement, containerEl: HTMLElement): () => 
     rotatingId = null;
     activeRotation = null;
     snapGuides = [];
+    equalSpacingGuides = [];
   }
 
   function onKeyDown(e: KeyboardEvent) {

@@ -6,7 +6,6 @@
   const bw         = $derived((data.properties.borderWidth as number) || 1);
   const bgFill     = $derived((data.properties.bgColor as string) || data.color);
   const bgOpacity  = $derived((data.properties.bgOpacity as number) || 0.5);
-  const textWidth  = $derived(data.label ? data.label.length * 7 + 12 : 0);
 
   const texUrl     = $derived(data.properties.textureDataUrl as string | undefined);
   const texOpacity = $derived((data.properties.textureOpacity as number) ?? 0.8);
@@ -15,6 +14,7 @@
   const texScale   = $derived((data.properties.textureScale as number) ?? 1);
   const texBlend   = $derived((data.properties.textureBlend as string) || 'multiply');
   const clipId     = $derived(`panel-clip-${data.id}`);
+  const labelSize  = $derived(Math.min(12, Math.max(9, data.width * 0.07)));
 </script>
 
 <defs>
@@ -45,10 +45,9 @@
   <rect x="0" y="0" width={data.width} height={data.height}
         rx={cr} fill="none" stroke={data.color} stroke-width={bw} />
 
-  <!-- 4. Label -->
+  <!-- 4. Label — rendered above the group rect, Figma-frame style. No background pill. -->
   {#if data.label}
-    <rect x="10" y="-6" width={textWidth} height="12" fill={bgFill} fill-opacity="0.9" />
-    <text x="16" y="4" fill={data.color} font-size="10" fill-opacity="0.7"
+    <text x="0" y="-4" fill={data.color} font-size={labelSize} fill-opacity="0.85"
           font-family="system-ui, sans-serif">{data.label}</text>
   {/if}
 </g>

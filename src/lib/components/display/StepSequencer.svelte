@@ -4,13 +4,14 @@
 
   const rows = $derived((data.properties.rows as number) || 1);
   const cols = $derived((data.properties.columns as number) || 16);
-  const cs = $derived((data.properties.cellSize as number) || 20);
   const gap = 2;
 
-  // Auto-scale: fill the component bounds (non-square cells allowed)
-  const cellW = $derived(Math.max(cs, Math.floor((data.width - (cols - 1) * gap) / cols)));
+  // Auto-scale: fill the component bounds (non-square cells allowed).
+  // 4px hard floor prevents zero/negative-width rects when the user shrinks
+  // the box hard; cellSize is the placement default, not a runtime clamp.
+  const cellW = $derived(Math.max(4, Math.floor((data.width - (cols - 1) * gap) / cols)));
   const cellH = $derived(rows > 1
-    ? Math.max(cs, Math.floor((data.height - (rows - 1) * gap) / rows))
+    ? Math.max(4, Math.floor((data.height - (rows - 1) * gap) / rows))
     : cellW);
 
   const pattern = $derived(((data.properties.pattern as string) || '').split(','));

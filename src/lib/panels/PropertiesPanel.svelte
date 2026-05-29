@@ -5,6 +5,9 @@
   import CollapsibleSection from './CollapsibleSection.svelte';
   import EffectsEditor from './EffectsEditor.svelte';
   import ColorField from '../ui/ColorField.svelte';
+  import CurveEditor from '../ui/CurveEditor.svelte';
+
+  let curveEditorOpen = $state(false);
   import { swatchState } from '../ui/swatches.svelte.js';
   import {
     createWorkspace, duplicateActiveWorkspace, switchWorkspace,
@@ -245,6 +248,7 @@
   {#if entry && entry.editableProperties.length > 0}
     <CollapsibleSection title="Parameters">
       {#each entry.editableProperties as prop}
+        {#if !prop.showWhen || getProp(prop.showWhen.propPath) === prop.showWhen.equals}
         <div class="props-row">
           <span class="props-label">{prop.label}</span>
           {#if prop.type === 'checkbox'}
@@ -261,12 +265,13 @@
                      setProp(prop.propPath || prop.key, v);
                    }} />
           {:else if prop.type === 'select' && prop.options}
+            {@const isFontSelect = prop.key === 'fontFamily'}
             <select class="props-input"
                     value={getProp(prop.propPath || prop.key) as string}
-                    style="font-family: {getProp(prop.propPath || prop.key) as string};"
+                    style={isFontSelect ? `font-family: ${getProp(prop.propPath || prop.key) as string};` : ''}
                     onchange={(e) => setProp(prop.propPath || prop.key, (e.target as HTMLSelectElement).value)}>
               {#each prop.options as opt}
-                <option value={opt.value} style="font-family: {opt.value};">{opt.label}</option>
+                <option value={opt.value} style={isFontSelect ? `font-family: ${opt.value};` : ''}>{opt.label}</option>
               {/each}
             </select>
           {:else if prop.type === 'color'}
@@ -277,14 +282,25 @@
                    value={getProp(prop.propPath || prop.key) as number}
                    oninput={(e) => setProp(prop.propPath || prop.key, Number((e.target as HTMLInputElement).value))} />
             <span class="props-value">{getProp(prop.propPath || prop.key)}</span>
+          {:else if prop.type === 'curve'}
+            <button class="props-input"
+                    disabled={!single}
+                    onclick={() => { if (single) curveEditorOpen = true; }}>
+              Edit curve…
+            </button>
           {:else}
             <input class="props-input" type="text"
                    value={getProp(prop.propPath || prop.key) as string}
                    oninput={(e) => setProp(prop.propPath || prop.key, (e.target as HTMLInputElement).value)} />
           {/if}
         </div>
+        {/if}
       {/each}
     </CollapsibleSection>
+  {/if}
+
+  {#if curveEditorOpen && single}
+    <CurveEditor data={single} onclose={() => curveEditorOpen = false} />
   {/if}
   {#if single}
     <EffectsEditor data={single} />
@@ -430,6 +446,18 @@
                value={appState.refImageOpacity}
                oninput={(e) => { appState.refImageOpacity = +(e.target as HTMLInputElement).value; }} />
         <span class="props-value">{Math.round(appState.refImageOpacity * 100)}%</span>
+      </div>
+      <div class="props-row">
+        <span class="props-label">Offset X</span>
+        <input type="number" step="1"
+               value={appState.refImageOffsetX}
+               oninput={(e) => { appState.refImageOffsetX = +(e.target as HTMLInputElement).value || 0; appState.isDirty = true; }} />
+      </div>
+      <div class="props-row">
+        <span class="props-label">Offset Y</span>
+        <input type="number" step="1"
+               value={appState.refImageOffsetY}
+               oninput={(e) => { appState.refImageOffsetY = +(e.target as HTMLInputElement).value || 0; appState.isDirty = true; }} />
       </div>
       <div class="props-row">
         <button class="props-btn"

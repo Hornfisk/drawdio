@@ -31,6 +31,8 @@ export interface Workspace {
   refImageDataUrl: string | null;
   refImageOpacity: number;
   refImageVisible: boolean;
+  refImageOffsetX: number;
+  refImageOffsetY: number;
   components: ComponentData[];
   groups: Group[];
   nextId: number;
@@ -92,6 +94,8 @@ export const appState = $state({
   refImageDataUrl: null as string | null,
   refImageOpacity: 0.5,
   refImageVisible: true,
+  refImageOffsetX: 0,
+  refImageOffsetY: 0,
   // Workspaces (frames). Populated on app init via ensureWorkspace().
   workspaces: [] as Workspace[],
   activeWorkspaceId: '',
