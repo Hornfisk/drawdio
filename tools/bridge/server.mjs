@@ -10,7 +10,7 @@ import path from 'path';
 import crypto from 'crypto';
 
 const LAYOUT = path.resolve(
-  process.env.BRIDGE_TARGET || process.env.SQUELCH_LAYOUT || process.argv[2] || './Layout.json'
+  process.env.BRIDGE_TARGET || process.argv[2] || './Layout.json'
 );
 const PORT = Number(process.env.BRIDGE_PORT || 7878);
 
