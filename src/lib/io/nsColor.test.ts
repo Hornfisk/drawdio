@@ -18,4 +18,8 @@ describe('nsColor', () => {
     expect(nsColor('')).toMatch(/^#[0-9a-f]{6}$/i);
     expect(nsColor('x')).toMatch(/^#[0-9a-f]{6}$/i);
   });
+
+  it('produces a stable pinned value (guards against hash drift)', () => {
+    expect(nsColor('faceplate')).toBe('#5966c0');
+  });
 });
