@@ -1,13 +1,16 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 import { registerAllComponents } from '../components/register-all';
 import { applyFlatManifest, toFlatManifest, type FlatManifest } from './flatManifest';
 import { appState } from '../state/app.svelte.js';
 
-registerAllComponents();
-
 describe('flatManifest round-trip', () => {
+  beforeAll(() => { registerAllComponents(); });
+
   beforeEach(() => {
     appState.components.length = 0;
+    appState.groups.length = 0;
+    appState.selectedIds.length = 0;
+    appState.nextId = 1;
   });
 
   it('applies bounds, lock, and type for a dotted id', () => {
@@ -28,7 +31,7 @@ describe('flatManifest round-trip', () => {
     };
     applyFlatManifest(m);
     const out = toFlatManifest();
-    expect(out.fx.delayMix).toMatchObject({ x: 5, y: 6, w: 40, h: 40, type: 'rotary_knob' });
+    expect(out.fx.delayMix).toMatchObject({ x: 5, y: 6, w: 40, h: 40, type: 'rotary_knob', locked: false });
   });
 
   it('falls back to panel_group for unknown types', () => {
