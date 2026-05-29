@@ -39,6 +39,13 @@ manifests back to the file. Echo is suppressed by SHA of the last bytes written.
 
 Messages:
 - `{ type: "manifest", nonce, json, file? }` — full manifest, both directions.
+  `json` is a JSON object (not a serialized string); only the outer WS frame is stringified.
+  `nonce` is an opaque token set by the sender: the drawdio client uses a short random string
+  (`Math.random().toString(36)`); the server uses `"init"` on connect and an 8-char SHA1 slice
+  on file-change broadcasts. A receiver that sees a `nonce` equal to the one it last sent
+  discards the message — this is how each side ignores its own change coming back.
+  `file` (the manifest path the server is watching) is included only on the initial
+  connect message; subsequent file-change broadcasts omit it. Clients need not send `file`.
 - `{ type: "backdrop", dataUrl, width, height, file }` — server → client only.
 
 ## Host responsibilities
