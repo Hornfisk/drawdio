@@ -8,6 +8,7 @@
 import { appState } from '../state/app.svelte.js';
 import { createDefaultEffects, type ComponentData } from '../components/types.js';
 import { getEntry } from '../components/registry.js';
+import { nsColor } from './nsColor.js';
 
 export interface FlatEntry {
   x: number;
@@ -20,12 +21,6 @@ export interface FlatEntry {
 }
 export type FlatManifest = Record<string, Record<string, FlatEntry>>;
 
-const NS_COLORS: Record<string, string> = {
-  faceplate: '#c9a94e',
-  fx:        '#4fc3f7',
-  label:     '#888888',
-};
-const DEFAULT_COLOR = '#7a7a7a';
 
 function isDottedManifestId(id: string): { ns: string; name: string } | null {
   const i = id.indexOf('.');
@@ -109,11 +104,11 @@ export function applyFlatManifest(json: FlatManifest): number {
           existing.properties = { ...resolvedEntry.defaultProps.properties };
         }
       } else {
-        const nsColor = NS_COLORS[ns] || DEFAULT_COLOR;
-        const color = resolvedEntry?.defaultProps.color ?? nsColor;
+        const fallbackColor = nsColor(ns);
+        const color = resolvedEntry?.defaultProps.color ?? fallbackColor;
         const properties = resolvedEntry
           ? { ...resolvedEntry.defaultProps.properties }
-          : { bgColor: nsColor, bgOpacity: 0.35, cornerRadius: 2, borderWidth: 1 };
+          : { bgColor: fallbackColor, bgOpacity: 0.35, cornerRadius: 2, borderWidth: 1 };
         const comp: ComponentData = {
           id,
           type: resolvedType,
