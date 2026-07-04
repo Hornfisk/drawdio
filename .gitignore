@@ -4,3 +4,6 @@ dist/
 
 # Git worktrees
 .worktrees/
+
+# Code intelligence index (generated)
+.codegraph/
